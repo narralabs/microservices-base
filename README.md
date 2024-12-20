@@ -6,10 +6,10 @@ but is flexible enough to be replaced with other languages like Go, Python, etc.
 
 ## Requirements
 
-- Docker
-- Kubernetes
-- Skaffold (for simplifying development by automating building, pushing and deploying)
-- Minikube (for creating a local k8s cluster)
+- [Docker](https://docs.docker.com/get-docker/)
+- [Kubernetes](https://kubernetes.io/)
+- [Skaffold](https://skaffold.dev/) (for simplifying development by automating building, pushing and deploying)
+- [Minikube](https://minikube.sigs.k8s.io/docs/) (for creating a local k8s cluster)
 
 ## Getting Started
 
