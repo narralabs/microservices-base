@@ -4,3 +4,7 @@ build:
   artifacts:
     - image: frontend
       context: src/frontend
+      sync:
+        manual:
+          - src: '**'
+            dest: /app
