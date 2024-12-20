@@ -16,5 +16,5 @@ but is flexible enough to be replaced with other languages like Go, Python, etc.
 1. Clone the repository
 2. Start the k8s cluster: `minikube start`
 3. Run `skaffold dev` to start the development environment
-4. Open the tunnel: `minikube tunnel`
+4. In another terminal, open the tunnel: `minikube tunnel`
 5. Open the frontend: `http://localhost:3000`
