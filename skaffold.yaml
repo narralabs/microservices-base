@@ -8,3 +8,9 @@ build:
         manual:
           - src: '**'
             dest: /app
+    - image: userservice
+      context: src/userservice
+      sync:
+        manual:
+          - src: '**'
+            dest: /app

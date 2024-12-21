@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+
+set -e # Exit on error
+
+# Get absolute path of script directory
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+echo "Proto directory: $SCRIPT_DIR"
+
+# Copy proto files to respective service directories
+echo "Copying app.proto file to frontend"
+cp "$SCRIPT_DIR"/app.proto "$SCRIPT_DIR/../src/frontend/proto"
+sed -i '' '1i\
+// WARNING: This file is auto-generated. DO NOT MODIFY.
+' "$SCRIPT_DIR/../src/frontend/proto/app.proto"
+
+echo "Copying app.proto file to userservice"
+cp "$SCRIPT_DIR"/app.proto "$SCRIPT_DIR/../src/userservice/proto"
+sed -i '' '1i\
+// WARNING: This file is auto-generated. DO NOT MODIFY.
+' "$SCRIPT_DIR/../src/userservice/proto/app.proto"
+
+echo "Proto update completed successfully!"

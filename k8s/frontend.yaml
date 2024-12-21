@@ -1,32 +1,34 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend
+  name: frontend-k8s-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: frontend
+      app: frontend-k8s-pod
   template:
     metadata:
       labels:
-        app: frontend
+        app: frontend-k8s-pod
     spec:
       containers:
         - name: frontend
           image: frontend
           ports:
             - containerPort: 3000
+          env:
+            - name: USERSERVICE_URL
+              value: userservice-k8s-service:7000
+          command: ["nodemon", "./bin/www"]
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend
-  labels:
-    app: frontend
+  name: frontend-k8s-service
 spec:
   selector:
-    app: frontend
+    app: frontend-k8s-pod
   ports:
     - protocol: TCP
       port: 3000

@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userservice-k8s-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: userservice-k8s-pod
+  template:
+    metadata:
+      labels:
+        app: userservice-k8s-pod
+    spec:
+      containers:
+        - name: userservice
+          image: userservice
+          ports:
+            - containerPort: 7000
+          command: ["nodemon", "server.js"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userservice-k8s-service
+spec:
+  selector:
+    app: userservice-k8s-pod
+  ports:
+    - protocol: TCP
+      port: 7000
+      targetPort: 7000
+  type: ClusterIP
