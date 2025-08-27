@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongoservice-k8s-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongoservice-k8s-pod
+  template:
+    metadata:
+      labels:
+        app: mongoservice-k8s-pod
+    spec:
+      containers:
+        - name: mongoservice
+          image: mongoservice
+          ports:
+            - containerPort: 27017
+          command: ["mongod"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongoservice-k8s-service
+spec:
+  selector:
+    app: mongoservice-k8s-pod
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+  type: ClusterIP
