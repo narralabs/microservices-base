@@ -1,5 +1,27 @@
 extends layout
 
 block content
-  h1= title
-  p Welcome to #{title}
+  .cafe-container
+    h1.cafe-title= title
+    p.cafe-description= description
+    
+    .main-content
+      .menu-section
+        h2.menu-title Our Coffee Menu
+        .menu-list
+          each item in menu
+            .menu-item
+              .menu-item-header
+                h3.item-name= item.name
+                .item-price= item.price
+              p.item-description= item.description
+      
+      .chat-section
+        h2.chat-title Order via AI Chat
+        p.chat-description Chat with our AI assistant to place your order. Our local LLM-powered system will help you customize your perfect coffee drink.
+        .chat-box
+          .chat-messages
+            // Messages will appear here
+          .chat-input
+            input.message-input(type="text" placeholder="Type your order here...")
+            button.send-button Send
