@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./src/frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - USERSERVICE_URL=userservice:7000
+    command: nodemon ./bin/www
+    volumes:
+      - ./src/frontend:/app
+      - /app/node_modules
+    depends_on:
+      - userservice
+
+  userservice:
+    build:
+      context: ./src/userservice
+    ports:
+      - "7000"
+    environment:
+      - MONGODB_URL=mongodb://mongoservice:27017/
+    command: nodemon server.js
+    volumes:
+      - ./src/userservice:/app
+      - /app/node_modules
+    depends_on:
+      - mongoservice
+
+  mongoservice:
+    build:
+      context: ./src/mongoservice
+    ports:
+      - "27017"
+    command: mongod
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:
