@@ -1,0 +1,20 @@
+extends layout
+
+block content
+  h1= title
+  p Welcome to #{title}
+
+  form(action="/users/create", method="POST")
+    div.form-group
+      label(for="firstName") First Name:
+      input#firstName(type="text", name="firstName", required)
+    
+    div.form-group
+      label(for="lastName") Last Name:
+      input#lastName(type="text", name="lastName", required)
+    
+    div.form-group
+      label(for="email") Email:
+      input#email(type="email", name="email", required)
+    
+    button(type="submit") Create User

@@ -32,7 +32,27 @@ body {
   text-align: center;
   font-size: 1.2rem;
   color: var(--secondary-color);
+  margin-bottom: 2rem;
+}
+
+.nav-links {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
   margin-bottom: 3rem;
+}
+
+.nav-links a {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--accent-color);
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+  transition: background-color 0.2s;
+}
+
+.nav-links a:hover {
+  background-color: var(--primary-color);
 }
 
 .main-content {
@@ -172,6 +192,85 @@ body {
 }
 
 .send-button:hover {
+  background-color: var(--primary-color);
+}
+
+/* User management styles */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--primary-color);
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--secondary-color);
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+button[type="submit"] {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button[type="submit"]:hover {
+  background-color: var(--primary-color);
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 2rem;
+  background-color: white;
+  border-radius: 5px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.users-table th,
+.users-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--background-color);
+}
+
+.users-table th {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.users-table tr:hover {
+  background-color: var(--background-color);
+}
+
+.create-button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--accent-color);
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+  transition: background-color 0.2s;
+}
+
+.create-button:hover {
   background-color: var(--primary-color);
 }
 

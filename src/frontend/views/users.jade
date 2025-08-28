@@ -1,0 +1,24 @@
+extends layout
+
+block content
+  h1= title
+  
+  a(href="/users/create", class="create-button") Create New User
+  
+  if users && users.length
+    table.users-table
+      thead
+        tr
+          th ID
+          th First Name
+          th Last Name
+          th Email
+      tbody
+        each user in users
+          tr
+            td= user.id
+            td= user.first_name
+            td= user.last_name
+            td= user.email
+  else
+    p No users found.

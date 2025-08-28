@@ -18,6 +18,9 @@ spec:
           ports:
             - containerPort: 7000
           command: ["nodemon", "server.js"]
+          env:
+            - name: MONGODB_URL
+              value: mongodb://mongoservice-k8s-service:27017/microservices_development
 ---
 apiVersion: v1
 kind: Service

@@ -11,7 +11,6 @@ services:
     command: nodemon ./bin/www
     volumes:
       - ./src/frontend:/app
-      - /app/node_modules
     depends_on:
       - userservice
 
@@ -21,11 +20,10 @@ services:
     ports:
       - "7000"
     environment:
-      - MONGODB_URL=mongodb://mongoservice:27017/
+      - MONGODB_URL=mongodb://mongoservice:27017/microservices_development
     command: nodemon server.js
     volumes:
       - ./src/userservice:/app
-      - /app/node_modules
     depends_on:
       - mongoservice
 
