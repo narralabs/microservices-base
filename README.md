@@ -13,9 +13,9 @@ but is flexible enough to be replaced with other languages like Go, Python, etc.
 
 ## Getting Started Local Development
 
-When developing. We recommend you use docke-compose. This is because docker-compose is easier to setup and supports
-running one-off containers. This is helpful when adding npm packages among other things that skaffold + minikube
-does not support.
+When developing locally we recommend that you use docker-compose. This is because docker-compose is easier to
+setup and supports running one-off containers. This is helpful when adding npm packages among other things that
+skaffold + minikube does not support.
 
 1. Clone the repository
 2. Start the services: `docker compose up`
@@ -23,9 +23,9 @@ does not support.
 
 ## Getting Started Local k8s
 
-Only use local k8s when you want to test the local k8s cluster that will mimic production. In development, please
-still use docker-compose. This is more of a sanity check to make sure the k8s configuration is working locally
-before deploying to production.
+Only use local k8s (via minikube) when you want to test the local k8s cluster that mimics production. In you're
+planning to do local development, please use docker-compose. This is more of a sanity check to make sure the k8s
+configuration is working locally before deploying to production.
 
 1. Clone the repository
 2. Start the k8s cluster: `minikube start`
