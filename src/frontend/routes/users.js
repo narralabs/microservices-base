@@ -28,7 +28,8 @@ router.get('/', function(req, res, next) {
   client.listUsers({}, (err, response) => {
     console.log('Got response for listUsers gRPC call: ', response);
     if (err) {
-      res.status(500).send('Internal Server Error');
+      const errorMessage = err.details || err.message || 'Internal Server Error';
+      res.status(500).send(errorMessage);
       return;
     }
     res.render('users', { title: 'Users', users: response.users });
@@ -50,7 +51,13 @@ router.post('/create', function(req, res, next) {
   client.createUser(user, (err, response) => {
     if (err) {
       console.error('Error creating user:', err);
-      res.status(500).send('Error creating user');
+      const errorMessage = err.details || err.message || 'Failed to create user. Please try again.';
+      // Re-render the form with error message and previous input values
+      res.render('create-user', {
+        title: 'Create New User',
+        error: errorMessage,
+        user: user
+      });
       return;
     }
     res.redirect('/users');

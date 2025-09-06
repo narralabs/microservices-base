@@ -274,6 +274,23 @@ button[type="submit"]:hover {
   background-color: var(--primary-color);
 }
 
+/* Alert styles */
+.alert {
+  padding: 1rem;
+  border-radius: 5px;
+  margin-bottom: 1.5rem;
+}
+
+.alert-error {
+  background-color: #fee2e2;
+  border: 1px solid #ef4444;
+  color: #991b1b;
+}
+
+.alert p {
+  margin: 0;
+}
+
 /* Responsive design for smaller screens */
 @media (max-width: 1024px) {
   .main-content {

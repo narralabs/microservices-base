@@ -4,17 +4,21 @@ block content
   h1= title
   p Welcome to #{title}
 
+  if error
+    div.alert.alert-error
+      p= error
+
   form(action="/users/create", method="POST")
     div.form-group
       label(for="firstName") First Name:
-      input#firstName(type="text", name="firstName", required)
-    
+      input#firstName(type="text", name="firstName", value=user ? user.first_name : '')
+
     div.form-group
       label(for="lastName") Last Name:
-      input#lastName(type="text", name="lastName", required)
-    
+      input#lastName(type="text", name="lastName", value=user ? user.last_name : '')
+
     div.form-group
       label(for="email") Email:
-      input#email(type="email", name="email", required)
+      input#email(type="email", name="email", value=user ? user.email : '')
     
     button(type="submit") Create User
