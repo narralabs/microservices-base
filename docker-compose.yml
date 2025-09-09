@@ -7,32 +7,32 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - USERSERVICE_URL=userservice:7000
+      - USER_SERVICE_URL=user-service:7000
+      - SESSION_SECRET=your-super-secret-key-change-in-production
     command: nodemon ./bin/www
     volumes:
       - ./src/frontend:/app
     depends_on:
-      - userservice
+      - user-service
 
-  userservice:
+  user-service:
     build:
-      context: ./src/userservice
+      context: ./src/user-service
     ports:
       - "7000"
     environment:
-      - MONGODB_URL=mongodb://mongoservice:27017/microservices_development
+      - MONGODB_URL=mongodb://mongo-service:27017/microservices_development
     command: nodemon server.js
     volumes:
-      - ./src/userservice:/app
+      - ./src/user-service:/app
     depends_on:
-      - mongoservice
+      - mongo-service
 
-  mongoservice:
+  mongo-service:
     build:
-      context: ./src/mongoservice
+      context: ./src/mongo-service
     ports:
-      - "27017"
-    command: mongod
+      - "27017:27017"
     volumes:
       - mongodb_data:/data/db
 

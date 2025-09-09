@@ -15,6 +15,46 @@ body {
   line-height: 1.6;
 }
 
+.site-header {
+  background-color: var(--primary-color);
+  padding: 1rem 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.welcome-text {
+  color: white;
+  font-size: 1rem;
+}
+
+.logout-link, .login-link {
+  color: white;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border: 1px solid white;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.logout-link:hover, .login-link:hover {
+  background-color: white;
+  color: var(--primary-color);
+}
+
 .cafe-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -219,6 +259,13 @@ body {
   border-color: var(--accent-color);
 }
 
+.form-help {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--secondary-color);
+}
+
 button[type="submit"] {
   padding: 0.75rem 1.5rem;
   background-color: var(--accent-color);
@@ -289,6 +336,43 @@ button[type="submit"]:hover {
 
 .alert p {
   margin: 0;
+}
+
+/* Login styles */
+.login-container {
+  max-width: 400px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: white;
+  border-radius: 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.login-container h1 {
+  color: var(--primary-color);
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.signup-link {
+  margin-top: 1.5rem;
+  text-align: center;
+  color: var(--secondary-color);
+}
+
+.signup-link a {
+  color: var(--accent-color);
+  text-decoration: none;
+}
+
+.signup-link a:hover {
+  text-decoration: underline;
 }
 
 /* Responsive design for smaller screens */

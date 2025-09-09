@@ -4,4 +4,13 @@ html
     title= title
     link(rel='stylesheet', href='/stylesheets/style.css')
   body
+    header.site-header
+      .header-content
+        if user
+          .user-info
+            span.welcome-text Welcome, #{user.name}
+            a.logout-link(href="/auth/logout") Logout
+        else
+          .auth-links
+            a.login-link(href="/auth/login") Login
     block content

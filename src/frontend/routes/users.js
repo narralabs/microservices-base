@@ -19,7 +19,7 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, options);
 const UserService = grpc.loadPackageDefinition(packageDefinition).app.UserService;
 
 const client = new UserService(
-  process.env.USERSERVICE_URL,
+  process.env.USER_SERVICE_URL,
   grpc.credentials.createInsecure()
 );
 
@@ -41,14 +41,46 @@ router.get('/create', function(req, res, next) {
 });
 
 router.post('/create', function(req, res, next) {
-  const user = {
-    first_name: req.body.firstName,
-    last_name: req.body.lastName,
-    email: req.body.email
+  const { firstName, lastName, email, password, confirmPassword } = req.body;
+
+  // Validate password requirements
+  if (!password || password.length < 8) {
+    return res.render('create-user', {
+      title: 'Create New User',
+      error: 'Password must be at least 8 characters long',
+      user: { first_name: firstName, last_name: lastName, email }
+    });
+  }
+
+  // Check if password contains both letters and numbers
+  if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+    return res.render('create-user', {
+      title: 'Create New User',
+      error: 'Password must contain both letters and numbers',
+      user: { first_name: firstName, last_name: lastName, email }
+    });
+  }
+
+  // Check if passwords match
+  if (password !== confirmPassword) {
+    return res.render('create-user', {
+      title: 'Create New User',
+      error: 'Passwords do not match',
+      user: { first_name: firstName, last_name: lastName, email }
+    });
+  }
+
+  // Create request object matching CreateUserRequest proto message
+  const createUserRequest = {
+    first_name: firstName,
+    last_name: lastName,
+    email: email,
+    password: password,
+    role: 'user'  // Default role for new users
   };
 
   console.log('Make createUser gRPC call to UserService');
-  client.createUser(user, (err, response) => {
+  client.createUser(createUserRequest, (err, response) => {
     if (err) {
       console.error('Error creating user:', err);
       const errorMessage = err.details || err.message || 'Failed to create user. Please try again.';
@@ -56,11 +88,12 @@ router.post('/create', function(req, res, next) {
       res.render('create-user', {
         title: 'Create New User',
         error: errorMessage,
-        user: user
+        user: { first_name: firstName, last_name: lastName, email }
       });
       return;
     }
-    res.redirect('/users');
+    // Redirect to login page after successful registration
+    res.redirect('/auth/login');
   });
 });
 

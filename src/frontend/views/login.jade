@@ -1,0 +1,19 @@
+extends layout
+
+block content
+  .login-container
+    h1 Login
+    if error
+      .error-message= error
+    form.login-form(action="/auth/login" method="POST")
+      .form-group
+        label(for="email") Email:
+        input#email(type="email" name="email" required)
+      .form-group
+        label(for="password") Password:
+        input#password(type="password" name="password" required)
+      button.btn.btn-primary(type="submit") Login
+      
+    .signup-link
+      p Don't have an account? 
+        a(href="/users/create") Sign up

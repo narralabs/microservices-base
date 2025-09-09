@@ -19,6 +19,15 @@ block content
 
     div.form-group
       label(for="email") Email:
-      input#email(type="email", name="email", value=user ? user.email : '')
+      input#email(type="email", name="email", value=user ? user.email : '', required)
+
+    div.form-group
+      label(for="password") Password:
+      input#password(type="password", name="password", required)
+      small.form-help Minimum 8 characters, must include numbers and letters
+
+    div.form-group
+      label(for="confirmPassword") Confirm Password:
+      input#confirmPassword(type="password", name="confirmPassword", required)
     
     button(type="submit") Create User

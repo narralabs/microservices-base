@@ -18,7 +18,7 @@ spec:
           ports:
             - containerPort: 3000
           env:
-            - name: USERSERVICE_URL
+            - name: USER_SERVICE_URL
               value: userservice-k8s-service:7000
           command: ["nodemon", "./bin/www"]
 ---
