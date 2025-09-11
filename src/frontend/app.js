@@ -7,7 +7,9 @@ var cookieSession = require('cookie-session');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
-var authRouter = require('./routes/auth');
+var loginRouter = require('./routes/login');
+var signupRouter = require('./routes/signup');
+var logoutRouter = require('./routes/logout');
 var { isAuthenticated } = require('./middleware/auth');
 
 var app = express();
@@ -41,7 +43,9 @@ app.use((req, res, next) => {
 });
 
 // Public routes
-app.use('/auth', authRouter);
+app.use('/login', loginRouter);
+app.use('/signup', signupRouter);
+app.use('/logout', logoutRouter);
 
 // Protected routes
 app.use(isAuthenticated);

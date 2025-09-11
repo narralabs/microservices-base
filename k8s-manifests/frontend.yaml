@@ -19,7 +19,9 @@ spec:
             - containerPort: 3000
           env:
             - name: USER_SERVICE_URL
-              value: userservice-k8s-service:7000
+              value: user-service-k8s-service:7000
+            - name: SESSION_SECRET
+              value: your-super-secret-key-change-in-production
           command: ["nodemon", "./bin/www"]
 ---
 apiVersion: v1

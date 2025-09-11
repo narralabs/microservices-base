@@ -45,7 +45,7 @@ const isAuthenticated = async (req, res, next) => {
     const accessToken = req.session.accessToken;
 
     if (!accessToken) {
-      return res.redirect('/auth/login');
+      return res.redirect('/login');
     }
 
     try {
@@ -53,6 +53,7 @@ const isAuthenticated = async (req, res, next) => {
       const result = await validateTokenAsync(accessToken);
 
       if (!result.valid) {
+        req.session = null;
         throw new Error('Invalid token');
       }
 
@@ -65,7 +66,8 @@ const isAuthenticated = async (req, res, next) => {
       const refreshToken = req.cookies.refreshToken;
 
       if (!refreshToken) {
-        return res.redirect('/auth/login');
+        req.session = null;
+        return res.redirect('/login');
       }
 
       try {
@@ -85,12 +87,14 @@ const isAuthenticated = async (req, res, next) => {
         return next();
       } catch (refreshError) {
         // Refresh token is invalid
-        return res.redirect('/auth/login');
+        req.session = null;
+        return res.redirect('/login');
       }
     }
   } catch (error) {
     console.error('Auth middleware error:', error);
-    return res.redirect('/auth/login');
+    req.session = null;
+    return res.redirect('/login');
   }
 };
 
@@ -107,9 +111,26 @@ const hasRole = (role) => {
   };
 };
 
+// Authenticate user with email and password
+const authenticateUser = (email, password) => {
+  return new Promise((resolve, reject) => {
+    userService.login({ email, password }, (error, response) => {
+      if (error) {
+        resolve({ success: false, error: error.message });
+      } else {
+        resolve({
+          success: true,
+          token: response.access_token,
+          refreshToken: response.refresh_token,
+          user: response.user
+        });
+      }
+    });
+  });
+};
+
 // Middleware to redirect authenticated users from auth pages
 const redirectIfAuthenticated = (req, res, next) => {
-  console.log('req.session.user, req.session.accessToken', req.session.user, req.session.accessToken);
   if (req.session.user && req.session.accessToken) {
     return res.redirect('/');
   }
@@ -119,5 +140,6 @@ const redirectIfAuthenticated = (req, res, next) => {
 module.exports = {
   isAuthenticated,
   hasRole,
-  redirectIfAuthenticated
+  redirectIfAuthenticated,
+  authenticateUser
 };

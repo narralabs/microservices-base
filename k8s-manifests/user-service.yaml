@@ -1,34 +1,34 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: userservice-k8s-deployment
+  name: user-service-k8s-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: userservice-k8s-pod
+      app: user-service-k8s-pod
   template:
     metadata:
       labels:
-        app: userservice-k8s-pod
+        app: user-service-k8s-pod
     spec:
       containers:
-        - name: userservice
-          image: userservice
+        - name: user-service
+          image: user-service
           ports:
             - containerPort: 7000
           command: ["nodemon", "server.js"]
           env:
             - name: MONGODB_URL
-              value: mongodb://mongoservice-k8s-service:27017/microservices_development
+              value: mongodb://mongo-service-k8s-service:27017/microservices_development
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: userservice-k8s-service
+  name: user-service-k8s-service
 spec:
   selector:
-    app: userservice-k8s-pod
+    app: user-service-k8s-pod
   ports:
     - protocol: TCP
       port: 7000

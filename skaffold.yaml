@@ -4,15 +4,11 @@ build:
   artifacts:
     - image: frontend
       context: src/frontend
-      sync:
-        manual:
-          - src: '**'
-            dest: /app
-    - image: userservice
-      context: src/userservice
-      sync:
-        manual:
-          - src: '**'
-            dest: /app
-    - image: mongoservice
-      context: src/mongoservice
+    - image: user-service
+      context: src/user-service
+    - image: mongo-service
+      context: src/mongo-service
+manifests:
+  kustomize:
+    paths:
+      - "./k8s-manifests"
