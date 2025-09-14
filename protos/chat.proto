@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package chat;
+
+// The chat service definition
+service ChatService {
+  // Process a chat message and extract any order information
+  rpc ProcessChat (ChatRequest) returns (ChatResponse) {}
+}
+
+// The request message containing the chat text
+message ChatRequest {
+  string text = 1;
+}
+
+// The response message containing the chat response and any orders
+message ChatResponse {
+  string response = 1;
+  repeated Order orders = 2;
+}
+
+// Represents an order action (add or remove items)
+message Order {
+  enum Action {
+    ADD = 0;
+    REMOVE = 1;
+  }
+  Action action = 1;
+  string item = 2;
+  int32 quantity = 3;
+}

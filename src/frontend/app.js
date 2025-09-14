@@ -10,6 +10,7 @@ var usersRouter = require('./routes/users');
 var loginRouter = require('./routes/login');
 var signupRouter = require('./routes/signup');
 var logoutRouter = require('./routes/logout');
+var chatRouter = require('./routes/chat');
 var { isAuthenticated } = require('./middleware/auth');
 
 var app = express();
@@ -46,6 +47,7 @@ app.use((req, res, next) => {
 app.use('/login', loginRouter);
 app.use('/signup', signupRouter);
 app.use('/logout', logoutRouter);
+app.use('/chat', chatRouter);
 
 // Protected routes
 app.use(isAuthenticated);

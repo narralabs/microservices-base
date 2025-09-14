@@ -8,12 +8,14 @@ services:
       - "3000:3000"
     environment:
       - USER_SERVICE_URL=user-service:7000
+      - CHAT_SERVICE_URL=chat-service:50051
       - SESSION_SECRET=your-super-secret-key-change-in-production
     command: nodemon ./bin/www
     volumes:
       - ./src/frontend:/app
     depends_on:
       - user-service
+      - chat-service
 
   user-service:
     build:
@@ -35,6 +37,50 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+
+  # llama-service:
+  #   build:
+  #     context: .
+  #     dockerfile: ./src/llama-service/Dockerfile
+  #   ports:
+  #     - "8080:8080"
+  #   volumes:
+  #     - ./models:/models
+  #   environment:
+  #     - MODEL=/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf
+  #     - N_GPU_LAYERS=0
+  #     - N_CTX=2048
+  #     - N_THREADS=4
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 8G
+  #         cpus: '4'
+  #       reservations:
+  #         memory: 4G
+  #         cpus: '2'
+  #   command: [
+  #     "--model", "/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+  #     "--host", "0.0.0.0", "--port", "8080",
+  #     "--n-gpu-layers", "0",
+  #     "--ctx-size", "2048",
+  #     "--threads", "4"]
+
+  chat-service:
+    build:
+      context: ./src/chat-service
+      dockerfile: Dockerfile
+    ports:
+      - "50051"
+    volumes:
+      - ./src/chat-service:/app
+    environment:
+      - NODE_ENV=development
+      - LLAMA_SERVICE_URL=http://host.docker.internal:8080
+      - MODEL_PATH=/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf
+    command: npm start
+    # depends_on:
+      # - llama-service
 
 volumes:
   mongodb_data:
