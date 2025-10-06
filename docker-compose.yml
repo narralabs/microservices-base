@@ -13,6 +13,7 @@ services:
     command: nodemon ./bin/www
     volumes:
       - ./src/frontend:/app
+      - /app/node_modules
     depends_on:
       - user-service
       - chat-service
@@ -27,6 +28,7 @@ services:
     command: nodemon server.js
     volumes:
       - ./src/user-service:/app
+      - /app/node_modules
     depends_on:
       - mongo-service
 
@@ -74,6 +76,7 @@ services:
       - "50051"
     volumes:
       - ./src/chat-service:/app
+      - /app/node_modules
     environment:
       - NODE_ENV=development
       - LLAMA_SERVICE_URL=http://host.docker.internal:8080
