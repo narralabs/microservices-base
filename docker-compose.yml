@@ -71,7 +71,6 @@ services:
   chat-service:
     build:
       context: ./src/chat-service
-      dockerfile: Dockerfile
     ports:
       - "50051"
     volumes:
