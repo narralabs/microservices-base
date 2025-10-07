@@ -28,27 +28,54 @@ document.addEventListener('DOMContentLoaded', () => {
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
-  async function sendMessage(text) {
-    try {
-      const response = await fetch('/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text }),
-      });
+  function sendMessage(text) {
+    // Create a message element for the assistant response
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message assistant-message';
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 
-      if (!response.ok) {
-        throw new Error('Failed to send message');
+    // Use EventSource for SSE streaming
+    const eventSource = new EventSource(`/chat/stream?text=${encodeURIComponent(text)}`);
+
+    let fullResponse = '';
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.error) {
+          messageDiv.textContent = 'Sorry, there was an error processing your request.';
+          eventSource.close();
+          return;
+        }
+
+        // Append content as it arrives
+        if (data.content) {
+          fullResponse += data.content;
+          messageDiv.textContent = fullResponse;
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Handle final message with orders
+        if (data.is_final) {
+          displayOrders(data.orders);
+          eventSource.close();
+        }
+      } catch (error) {
+        console.error('Error parsing SSE data:', error);
+        messageDiv.textContent = 'Sorry, there was an error processing your request.';
+        eventSource.close();
       }
+    };
 
-      const data = await response.json();
-      addMessage(data.response, false);
-      displayOrders(data.orders);
-    } catch (error) {
-      console.error('Error:', error);
-      addMessage('Sorry, there was an error processing your request.', false);
-    }
+    eventSource.onerror = (error) => {
+      console.error('SSE Error:', error);
+      if (fullResponse === '') {
+        messageDiv.textContent = 'Sorry, there was an error processing your request.';
+      }
+      eventSource.close();
+    };
   }
 
   // Handle send button click

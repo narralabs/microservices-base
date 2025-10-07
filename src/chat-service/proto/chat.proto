@@ -7,6 +7,9 @@ package chat;
 service ChatService {
   // Process a chat message and extract any order information
   rpc ProcessChat (ChatRequest) returns (ChatResponse) {}
+
+  // Stream chat responses as they are generated
+  rpc StreamChat (ChatRequest) returns (stream ChatStreamResponse) {}
 }
 
 // The request message containing the chat text
@@ -29,4 +32,11 @@ message Order {
   Action action = 1;
   string item = 2;
   int32 quantity = 3;
+}
+
+// Streaming response message containing text chunks
+message ChatStreamResponse {
+  string content = 1;
+  bool is_final = 2;
+  repeated Order orders = 3;
 }

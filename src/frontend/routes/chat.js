@@ -44,4 +44,50 @@ router.post('/', async (req, res) => {
   });
 });
 
+// Handle streaming chat requests
+router.get('/stream', (req, res) => {
+  const { text } = req.query;
+
+  if (!text) {
+    return res.status(400).json({ error: 'Text is required' });
+  }
+
+  // Set up SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  // Call gRPC streaming endpoint
+  const stream = client.streamChat({ text });
+
+  stream.on('data', (chunk) => {
+    // Send SSE data to client
+    res.write(`data: ${JSON.stringify({
+      content: chunk.content,
+      is_final: chunk.is_final,
+      orders: chunk.orders
+    })}\n\n`);
+
+    // Close connection on final message
+    if (chunk.is_final) {
+      res.end();
+    }
+  });
+
+  stream.on('error', (error) => {
+    console.error('Stream error:', error);
+    res.write(`data: ${JSON.stringify({ error: 'Stream error occurred' })}\n\n`);
+    res.end();
+  });
+
+  stream.on('end', () => {
+    res.end();
+  });
+
+  // Clean up on client disconnect
+  req.on('close', () => {
+    stream.cancel();
+  });
+});
+
 module.exports = router;

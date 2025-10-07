@@ -78,6 +78,110 @@ const chatService = {
         details: `Error processing chat: ${error.message}`
       });
     }
+  },
+
+  streamChat: async (call) => {
+    try {
+      const { text } = call.request;
+      const prompt = formatPrompt(text);
+
+      // Call llama service with streaming enabled
+      const response = await fetch(`${LLAMA_SERVICE_URL}/completion`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          n_predict: 512,
+          temperature: 0.7,
+          stop: ['</s>', 'User:', 'Assistant:'],
+          stream: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Llama service error: ${response.status} ${response.statusText}`);
+      }
+
+      let fullResponse = '';
+
+      // Process the SSE stream from llama.cpp
+      const reader = response.body;
+      let buffer = '';
+
+      reader.on('data', (chunk) => {
+        buffer += chunk.toString();
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+
+            if (data === '[DONE]') {
+              // Parse final response for orders
+              const { response: parsedResponse, orders } = parseOrders(fullResponse);
+              call.write({
+                content: '',
+                is_final: true,
+                orders: orders
+              });
+              call.end();
+              return;
+            }
+
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.content) {
+                fullResponse += parsed.content;
+                call.write({
+                  content: parsed.content,
+                  is_final: false,
+                  orders: []
+                });
+              }
+
+              // Check if generation is complete
+              if (parsed.stop) {
+                const { response: parsedResponse, orders } = parseOrders(fullResponse);
+                call.write({
+                  content: '',
+                  is_final: true,
+                  orders: orders
+                });
+                call.end();
+              }
+            } catch (e) {
+              console.error('Error parsing SSE data:', e);
+            }
+          }
+        }
+      });
+
+      reader.on('end', () => {
+        if (!call.finished) {
+          const { response: parsedResponse, orders } = parseOrders(fullResponse);
+          call.write({
+            content: '',
+            is_final: true,
+            orders: orders
+          });
+          call.end();
+        }
+      });
+
+      reader.on('error', (error) => {
+        console.error('Stream error:', error);
+        call.destroy(error);
+      });
+
+    } catch (error) {
+      call.destroy({
+        code: grpc.status.INTERNAL,
+        details: `Error processing chat stream: ${error.message}`
+      });
+    }
   }
 };
 
