@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llama-service-k8s-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llama-service-k8s-pod
+  template:
+    metadata:
+      labels:
+        app: llama-service-k8s-pod
+    spec:
+      initContainers:
+        - name: download-model
+          image: curlimages/curl:latest
+          env:
+            - name: MODEL_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: llama-config
+                  key: MODEL_URL
+          command:
+            - sh
+            - -c
+            - |
+              MODEL_FILE="/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
+
+              # Function to check if model exists
+              verify_model() {
+                if [ ! -f "$MODEL_FILE" ]; then
+                  return 1
+                fi
+
+                # Check file size (basic sanity check)
+                if command -v stat >/dev/null 2>&1; then
+                  FILE_SIZE=$(stat -c%s "$MODEL_FILE" 2>/dev/null || stat -f%z "$MODEL_FILE" 2>/dev/null || echo 0)
+                else
+                  FILE_SIZE=$(wc -c < "$MODEL_FILE" 2>/dev/null | tr -d ' ' || echo 0)
+                fi
+
+                if [ "$FILE_SIZE" -lt 1000000 ]; then
+                  echo "Model file too small ($FILE_SIZE bytes)"
+                  return 1
+                fi
+
+                echo "Valid model exists ($FILE_SIZE bytes)"
+                return 0
+              }
+
+              if verify_model; then
+                echo "Skipping download."
+              else
+                echo "Downloading model from $MODEL_URL..."
+                curl -L "$MODEL_URL" -o "$MODEL_FILE"
+
+                # Verify download
+                if verify_model; then
+                  echo "Model downloaded and verified successfully"
+                else
+                  echo "ERROR: Downloaded model failed verification"
+                  exit 1
+                fi
+              fi
+          volumeMounts:
+            - name: model-storage
+              mountPath: /models
+      containers:
+        - name: llama-service
+          image: narralabs/llama-service:no-model
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MODEL
+              value: models/mistral-7b-instruct-v0.2.Q4_K_M.gguf
+            - name: N_GPU_LAYERS
+              value: "0"
+            - name: N_CTX
+              value: "2048"
+            - name: N_THREADS
+              value: "4"
+          volumeMounts:
+            - name: model-storage
+              mountPath: /models
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: llama-model-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llama-service-k8s-service
+spec:
+  selector:
+    app: llama-service-k8s-pod
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP

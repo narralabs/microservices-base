@@ -12,9 +12,11 @@ spec:
       labels:
         app: frontend-k8s-pod
     spec:
+      # nodeSelector:
+      #   role: worker
       containers:
         - name: frontend
-          image: frontend
+          image: narralabs/frontend
           ports:
             - containerPort: 3000
           env:
@@ -22,6 +24,8 @@ spec:
               value: user-service-k8s-service:7000
             - name: SESSION_SECRET
               value: your-super-secret-key-change-in-production
+            - name: CHAT_SERVICE_URL
+              value: chat-service-k8s-service:50051
           command: ["nodemon", "./bin/www"]
 ---
 apiVersion: v1
@@ -32,7 +36,8 @@ spec:
   selector:
     app: frontend-k8s-pod
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 3000
       targetPort: 3000
   type: LoadBalancer

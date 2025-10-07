@@ -1,13 +1,19 @@
 apiVersion: skaffold/v4beta11
 kind: Config
 build:
+  local:
+    push: false
   artifacts:
-    - image: frontend
+    - image: narralabs/frontend
       context: src/frontend
-    - image: user-service
+    - image: narralabs/user-service
       context: src/user-service
-    - image: mongo-service
+    - image: narralabs/mongo-service
       context: src/mongo-service
+    - image: narralabs/chat-service
+      context: src/chat-service
+    - image: narralabs/llama-service
+      context: src/llama-service
 manifests:
   kustomize:
     paths:
