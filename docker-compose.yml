@@ -40,33 +40,32 @@ services:
     volumes:
       - mongodb_data:/data/db
 
-  # llama-service:
-  #   build:
-  #     context: .
-  #     dockerfile: ./src/llama-service/Dockerfile
-  #   ports:
-  #     - "8080:8080"
-  #   volumes:
-  #     - ./models:/models
-  #   environment:
-  #     - MODEL=/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf
-  #     - N_GPU_LAYERS=0
-  #     - N_CTX=2048
-  #     - N_THREADS=4
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: 8G
-  #         cpus: '4'
-  #       reservations:
-  #         memory: 4G
-  #         cpus: '2'
-  #   command: [
-  #     "--model", "/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
-  #     "--host", "0.0.0.0", "--port", "8080",
-  #     "--n-gpu-layers", "0",
-  #     "--ctx-size", "2048",
-  #     "--threads", "4"]
+  llama-service:
+    build:
+      context: ./src/llama-service
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./src/llama-service/models:/models
+    environment:
+      - MODEL=/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf
+      - N_GPU_LAYERS=0
+      - N_CTX=2048
+      - N_THREADS=4
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: '4'
+        reservations:
+          memory: 4G
+          cpus: '2'
+    command: [
+      "--model", "/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+      "--host", "0.0.0.0", "--port", "8080",
+      "--n-gpu-layers", "0",
+      "--ctx-size", "2048",
+      "--threads", "4"]
 
   chat-service:
     build:
@@ -80,9 +79,8 @@ services:
       - NODE_ENV=development
       - LLAMA_SERVICE_URL=http://host.docker.internal:8080
       - MODEL_PATH=/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf
-    command: npm start
-    # depends_on:
-      # - llama-service
+    depends_on:
+      - llama-service
 
 volumes:
   mongodb_data:
