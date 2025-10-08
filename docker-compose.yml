@@ -79,6 +79,7 @@ services:
       - MODEL_PATH=/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf
     depends_on:
       - llama-service
+    command: ["nodemon", "server.js"]
 
 volumes:
   mongodb_data:

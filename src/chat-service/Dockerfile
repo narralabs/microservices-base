@@ -11,6 +11,8 @@ COPY proto/ ./proto/
 # Install Node.js dependencies
 RUN npm install --production
 
+RUN npm install -g nodemon
+
 # Environment variables
 ENV LLAMA_SERVICE_URL=http://llama-service:8080
 
