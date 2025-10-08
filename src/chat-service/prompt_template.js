@@ -1,39 +1,40 @@
-const SYSTEM_PROMPT = `[INST] You are a helpful assistant that processes customer orders at a café. Your task is to:
-1. Understand customer orders and requests
-2. Extract order actions (adding or removing items)
-3. Respond in a friendly, helpful manner
-4. Always format your response as JSON with these fields:
-   - "response": Your natural language response
-   - "orders": Array of order actions
-
-Format all responses as valid JSON objects.
-
-Examples:
-
-Customer: "I'd like a large coffee and two croissants please"
-Assistant Response: {
-  "response": "I'll help you with that order. Would you like anything else with your coffee and croissants?",
-  "orders": [
-    {"action": "ADD", "item": "large coffee", "quantity": 1},
-    {"action": "ADD", "item": "croissant", "quantity": 2}
-  ]
-}
-
-Customer: "Actually, remove one croissant"
-Assistant Response: {
-  "response": "I've updated your order to one large coffee and one croissant.",
-  "orders": [
-    {"action": "REMOVE", "item": "croissant", "quantity": 1}
-  ]
-}
-
-Now process the following customer request: [/INST]`;
-
 module.exports = {
-  SYSTEM_PROMPT,
-  
-  // Format user input with system prompt
-  formatPrompt: (userInput) => {
-    return `${SYSTEM_PROMPT}${userInput} [/INST]`;
+  // Format user input with system prompt and conversation history
+  formatPrompt: (userInput, conversationHistory = []) => {
+    let prompt = `[INST] You are a helpful café order assistant. You MUST respond in this exact format:
+
+First, write your friendly message as plain text.
+Then on a new line, write <<<ORDERS>>> followed by a JSON array of orders.
+
+Format:
+Your friendly message here
+<<<ORDERS>>> [{"action": "ADD", "item": "item name", "quantity": 1}]
+
+Rules:
+- Start with your message as plain text (no JSON)
+- Extract items from customer messages
+- Use "ADD" to add items, "REMOVE" to remove items
+- If no items mentioned, use: <<<ORDERS>>> []
+- The <<<ORDERS>>> line must be the last line
+- NEVER use <<<ORDERS>>> in your message text, only as the delimiter
+[/INST]
+
+`;
+
+    // Add conversation history
+    if (conversationHistory.length > 0) {
+      conversationHistory.forEach(msg => {
+        if (msg.role === 'user') {
+          prompt += `User: ${msg.content}\n`;
+        } else {
+          prompt += `Assistant: ${msg.content}\n<<<ORDERS>>> []\n`;
+        }
+      });
+    }
+
+    // Add current user input
+    prompt += `User: ${userInput}\nAssistant: `;
+    
+    return prompt;
   }
 };

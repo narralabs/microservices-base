@@ -12,9 +12,16 @@ service ChatService {
   rpc StreamChat (ChatRequest) returns (stream ChatStreamResponse) {}
 }
 
+// Message in conversation history
+message ChatMessage {
+  string role = 1;  // "user" or "assistant"
+  string content = 2;
+}
+
 // The request message containing the chat text
 message ChatRequest {
   string text = 1;
+  repeated ChatMessage history = 2;
 }
 
 // The response message containing the chat response and any orders
@@ -39,4 +46,5 @@ message ChatStreamResponse {
   string content = 1;
   bool is_final = 2;
   repeated Order orders = 3;
+  string final_message = 4;
 }

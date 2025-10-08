@@ -45,48 +45,89 @@ router.post('/', async (req, res) => {
 });
 
 // Handle streaming chat requests
-router.get('/stream', (req, res) => {
-  const { text } = req.query;
+router.post('/stream', (req, res) => {
+  const { text, history } = req.body;
 
   if (!text) {
     return res.status(400).json({ error: 'Text is required' });
   }
 
   // Set up SSE headers
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no' // Disable buffering for nginx
+  });
+
+  // Send initial comment to establish the connection
+  res.write(':ok\n\n');
+
+  let streamEnded = false;
 
   // Call gRPC streaming endpoint
-  const stream = client.streamChat({ text });
+  const stream = client.streamChat({ text, history: history || [] });
 
   stream.on('data', (chunk) => {
-    // Send SSE data to client
-    res.write(`data: ${JSON.stringify({
-      content: chunk.content,
-      is_final: chunk.is_final,
-      orders: chunk.orders
-    })}\n\n`);
+    if (streamEnded) return;
 
-    // Close connection on final message
-    if (chunk.is_final) {
-      res.end();
+    try {
+      // Send SSE data to client
+      res.write(`data: ${JSON.stringify({
+        content: chunk.content,
+        is_final: chunk.is_final,
+        orders: chunk.orders,
+        final_message: chunk.final_message
+      })}\n\n`);
+
+      // Close connection on final message
+      if (chunk.is_final) {
+        streamEnded = true;
+        res.end();
+      }
+    } catch (error) {
+      console.error('Error writing to stream:', error);
+      streamEnded = true;
     }
   });
 
   stream.on('error', (error) => {
     console.error('Stream error:', error);
-    res.write(`data: ${JSON.stringify({ error: 'Stream error occurred' })}\n\n`);
-    res.end();
+    if (!streamEnded && !res.writableEnded) {
+      try {
+        // Extract meaningful error message from gRPC error
+        let errorMessage = 'Stream error occurred';
+        if (error.details) {
+          errorMessage = error.details;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        res.write(`data: ${JSON.stringify({
+          error: errorMessage,
+          is_final: true
+        })}\n\n`);
+        res.end();
+      } catch (e) {
+        console.error('Error ending stream:', e);
+      }
+      streamEnded = true;
+    }
   });
 
   stream.on('end', () => {
-    res.end();
+    if (!streamEnded && !res.writableEnded) {
+      res.end();
+      streamEnded = true;
+    }
   });
 
-  // Clean up on client disconnect
-  req.on('close', () => {
-    stream.cancel();
+  // Clean up on client disconnect (listen to response close, not request close)
+  res.on('close', () => {
+    if (!streamEnded) {
+      stream.cancel();
+      streamEnded = true;
+    }
   });
 });
 
