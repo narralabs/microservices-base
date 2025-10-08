@@ -32,6 +32,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function sendMessage(text) {
+    // Disable the send button and input while waiting for response
+    sendButton.disabled = true;
+    messageInput.disabled = true;
+    
     // Create a message element for the assistant response
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message assistant-message';
@@ -81,6 +85,9 @@ document.addEventListener('DOMContentLoaded', () => {
               if (data.error) {
                 messageDiv.textContent = `Error: ${data.error}`;
                 messageDiv.classList.add('error-message');
+                // Re-enable the send button and input
+                sendButton.disabled = false;
+                messageInput.disabled = false;
                 return;
               }
 
@@ -135,6 +142,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Add to conversation history
                 conversationHistory.push({ role: 'user', content: text });
                 conversationHistory.push({ role: 'assistant', content: finalMessage });
+
+                // Re-enable the send button and input
+                sendButton.disabled = false;
+                messageInput.disabled = false;
               }
             } catch (error) {
               console.error('Error parsing SSE data:', error);
@@ -145,6 +156,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       console.error('SSE Error:', error);
       messageDiv.textContent = 'Sorry, there was an error processing your request.';
+      // Re-enable the send button and input
+      sendButton.disabled = false;
+      messageInput.disabled = false;
     }
   }
 
