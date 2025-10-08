@@ -68,7 +68,7 @@ function parseOrders(text) {
         message: "I received your message. How can I help you?"
       };
     }
-    
+
     return {
       orders: parsed.orders || [],
       message: message
@@ -132,6 +132,12 @@ const chatService = {
     try {
       const { text, history } = call.request;
       const prompt = formatPrompt(text, history || []);
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log("=============== START PROMPT ===============")
+        console.log(prompt)
+        console.log("=============== END PROMPT ===============")
+      }
 
       // Call llama service with streaming enabled
       const response = await fetch(`${LLAMA_SERVICE_URL}/completion`, {
@@ -241,6 +247,12 @@ const chatService = {
       });
 
       reader.on('end', () => {
+        if (process.env.NODE_ENV === 'development') {
+          console.log("=============== START FULL RESPONSE =============");
+          console.log(fullResponse);
+          console.log("=============== END FULL RESPONSE ===============");
+        }
+
         if (!streamEnded && !call.cancelled) {
           const { message, orders } = parseOrders(fullResponse);
 
