@@ -10,7 +10,7 @@ html
       .header-content
         if user
           .user-info
-            span.welcome-text Welcome, #{user.name}
+            span.welcome-text Welcome, #{user.first_name}
             a.logout-link(href="/logout") Logout
         else
           .auth-links
