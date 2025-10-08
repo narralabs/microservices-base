@@ -8,8 +8,6 @@ build:
       context: src/frontend
     - image: narralabs/user-service
       context: src/user-service
-    - image: narralabs/mongo-service
-      context: src/mongo-service
     - image: narralabs/chat-service
       context: src/chat-service
     - image: narralabs/llama-service

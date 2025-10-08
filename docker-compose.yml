@@ -31,8 +31,7 @@ services:
       - mongo-service
 
   mongo-service:
-    build:
-      context: ./src/mongo-service
+    image: mongo:latest
     ports:
       - "27017:27017"
     volumes:
