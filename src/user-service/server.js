@@ -10,15 +10,23 @@ const MONGODB_URL = process.env.MONGODB_URL || 'mongodb://localhost:27017/';
 
 let db;
 
-async function connectToMongo() {
-  try {
-    const client = await MongoClient.connect(MONGODB_URL);
-    db = client.db('userdb');
-    console.log('Connected to MongoDB');
-  } catch (err) {
-    console.error('Failed to connect to MongoDB:', err);
-    process.exit(1);
+async function connectToMongo(retries = 5, delay = 5000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const client = await MongoClient.connect(MONGODB_URL);
+      db = client.db('userdb');
+      console.log('Connected to MongoDB');
+      return;
+    } catch (err) {
+      console.error(`Failed to connect to MongoDB (attempt ${i + 1}/${retries}):`, err.message);
+      if (i < retries - 1) {
+        console.log(`Retrying in ${delay / 1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
   }
+  console.error('Failed to connect to MongoDB after all retries');
+  process.exit(1);
 }
 
 const options = {
