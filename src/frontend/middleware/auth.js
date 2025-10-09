@@ -2,7 +2,7 @@ const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const jwt = require('jsonwebtoken');
 
-const PROTO_PATH = __dirname + '/../proto/app.proto';
+const PROTO_PATH = __dirname + '/../protos/app.proto';
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'localhost:7000';
 
 // Load proto file

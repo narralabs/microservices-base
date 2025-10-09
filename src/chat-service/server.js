@@ -5,7 +5,7 @@ const fetch = require('node-fetch');
 const { formatPrompt } = require('./prompt_template');
 
 // Load protobuf
-const PROTO_PATH = path.join(__dirname, './proto/chat.proto');
+const PROTO_PATH = path.join(__dirname, './protos/chat.proto');
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   keepCase: true,
   longs: String,

@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const { generateTokens, verifyAccessToken, verifyRefreshToken } = require('./utils/jwt');
 
 const PORT = process.env.PORT || 7000;
-const PROTO_PATH = "./proto/app.proto";
+const PROTO_PATH = "./protos/app.proto";
 const MONGODB_URL = process.env.MONGODB_URL || 'mongodb://localhost:27017/';
 
 let db;

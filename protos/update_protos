@@ -8,33 +8,33 @@ echo "Proto directory: $SCRIPT_DIR"
 
 # Create proto directories if they don't exist
 mkdir -p "$SCRIPT_DIR/../src/frontend/protos"
-mkdir -p "$SCRIPT_DIR/../src/user-service/proto"
-mkdir -p "$SCRIPT_DIR/../src/chat-service/proto"
+mkdir -p "$SCRIPT_DIR/../src/user-service/protos"
+mkdir -p "$SCRIPT_DIR/../src/chat-service/protos"
 
 # Copy app.proto to services that need it
 echo "Copying app.proto file to frontend"
-cp "$SCRIPT_DIR"/app.proto "$SCRIPT_DIR/../src/frontend/proto"
+cp "$SCRIPT_DIR"/app.proto "$SCRIPT_DIR/../src/frontend/protos"
 sed -i '' '1i\
 // WARNING: This file is auto-generated. DO NOT MODIFY.
-' "$SCRIPT_DIR/../src/frontend/proto/app.proto"
+' "$SCRIPT_DIR/../src/frontend/protos/app.proto"
 
 echo "Copying app.proto file to user-service"
-cp "$SCRIPT_DIR"/app.proto "$SCRIPT_DIR/../src/user-service/proto"
+cp "$SCRIPT_DIR"/app.proto "$SCRIPT_DIR/../src/user-service/protos"
 sed -i '' '1i\
 // WARNING: This file is auto-generated. DO NOT MODIFY.
-' "$SCRIPT_DIR/../src/user-service/proto/app.proto"
+' "$SCRIPT_DIR/../src/user-service/protos/app.proto"
 
 # Copy chat.proto to services that need it
 echo "Copying chat.proto file to frontend"
-cp "$SCRIPT_DIR"/chat.proto "$SCRIPT_DIR/../src/frontend/proto"
+cp "$SCRIPT_DIR"/chat.proto "$SCRIPT_DIR/../src/frontend/protos"
 sed -i '' '1i\
 // WARNING: This file is auto-generated. DO NOT MODIFY.
-' "$SCRIPT_DIR/../src/frontend/proto/chat.proto"
+' "$SCRIPT_DIR/../src/frontend/protos/chat.proto"
 
 echo "Copying chat.proto file to chat-service"
-cp "$SCRIPT_DIR"/chat.proto "$SCRIPT_DIR/../src/chat-service/proto"
+cp "$SCRIPT_DIR"/chat.proto "$SCRIPT_DIR/../src/chat-service/protos"
 sed -i '' '1i\
 // WARNING: This file is auto-generated. DO NOT MODIFY.
-' "$SCRIPT_DIR/../src/chat-service/proto/chat.proto"
+' "$SCRIPT_DIR/../src/chat-service/protos/chat.proto"
 
 echo "Proto update completed successfully!"

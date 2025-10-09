@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 
-const PROTO_PATH = "./proto/app.proto";
+const PROTO_PATH = "./protos/app.proto";
 
 const grpc = require("@grpc/grpc-js");
 const protoLoader = require('@grpc/proto-loader');

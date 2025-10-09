@@ -5,7 +5,7 @@ const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 
 // Load chat service proto
-const PROTO_PATH = path.join(__dirname, '../proto/chat.proto');
+const PROTO_PATH = path.join(__dirname, '../protos/chat.proto');
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   keepCase: true,
   longs: String,
