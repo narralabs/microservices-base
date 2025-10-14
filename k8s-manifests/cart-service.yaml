@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart-service-k8s-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cart-service-k8s-pod
+  template:
+    metadata:
+      labels:
+        app: cart-service-k8s-pod
+    spec:
+      containers:
+        - name: cart-service
+          image: narralabs/cart-service
+          ports:
+            - containerPort: 7002
+          env:
+            - name: MONGODB_URL
+              value: mongodb://mongo-service-k8s-service:27017/microservices_development
+          readinessProbe:
+            tcpSocket:
+              port: 7002
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 7002
+            initialDelaySeconds: 15
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cart-service-k8s-service
+spec:
+  selector:
+    app: cart-service-k8s-pod
+  ports:
+    - protocol: TCP
+      port: 7002
+      targetPort: 7002
+  type: ClusterIP

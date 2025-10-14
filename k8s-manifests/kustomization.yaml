@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - frontend.yaml
   - user-service.yaml
+  - cart-service.yaml
   - mongo-service.yaml
   - mongo-storage.yaml
   - chat-service.yaml

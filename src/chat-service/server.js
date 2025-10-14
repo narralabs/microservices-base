@@ -20,76 +20,188 @@ const chatProto = protoDescriptor.chat;
 // Llama service configuration
 const LLAMA_SERVICE_URL = process.env.LLAMA_SERVICE_URL || 'http://llama-service:8080';
 
-// Parse LLM response to extract orders
+// Normalize order action from new format to enum value
+// Handles: ADD, REMOVE, EMPTY_CART, QUERY_CART
+// Enum values: 0=ADD, 1=REMOVE, 2=EMPTY_CART
+// The LLM is responsible for calculating quantity differences (e.g., current=1, target=5 → ADD 4)
+function normalizeOrders(actions) {
+  if (!actions || !Array.isArray(actions)) {
+    return [];
+  }
+
+  const result = [];
+
+  for (const action of actions) {
+    const type = (action.type || action.action || '').toUpperCase();
+
+    switch (type) {
+      case 'ADD':
+        result.push({
+          action: 0,
+          item: action.item || '',
+          quantity: action.quantity || 1
+        });
+        break;
+
+      case 'REMOVE':
+        result.push({
+          action: 1,
+          item: action.item || '',
+          quantity: action.quantity || 1
+        });
+        break;
+
+      case 'EMPTY_CART':
+        result.push({
+          action: 2,
+          item: '',
+          quantity: 1
+        });
+        break;
+
+      case 'QUERY_CART':
+        // User is just asking about cart - no action needed
+        // Don't add anything to result
+        break;
+
+      default:
+        console.warn('Unknown action type:', type);
+    }
+  }
+
+  return result;
+}
+
+// Parse LLM response to extract orders and metadata
+// Validate LLM output for security issues
+function validateLLMOutput(text) {
+  if (!text || typeof text !== 'string') {
+    return { valid: false, reason: 'Empty or invalid response' };
+  }
+
+  // Check for control token leakage (model trying to manipulate its own prompt)
+  const suspiciousPatterns = [
+    /<\|start_header_id\|>/i,
+    /<\|end_header_id\|>/i,
+    /<\|eot_id\|>/i,
+    /<\|begin_of_text\|>/i,
+    /\[USER_INPUT\]/i,
+    /\[\/USER_INPUT\]/i,
+  ];
+
+  for (const pattern of suspiciousPatterns) {
+    if (pattern.test(text)) {
+      console.warn('⚠️ SECURITY: Detected control token in LLM output, rejecting response');
+      return { valid: false, reason: 'Invalid response format' };
+    }
+  }
+
+  // Check for out-of-character responses (role-playing as something else)
+  const outOfCharacterPatterns = [
+    /\b(ahoy|matey|arr+|ye|yer|shiver me timbers)\b/i, // pirate speak
+    /\b(thee|thou|thy|hath|doth)\b/i, // shakespearean
+    /\b(beep|boop|robot|compute)\b/i, // robot speak
+    /01010\d+/, // binary
+    /\*[^*]+\*/g, // roleplay actions like *tips hat*
+  ];
+
+  for (const pattern of outOfCharacterPatterns) {
+    if (pattern.test(text)) {
+      console.warn('⚠️ SECURITY: Detected out-of-character response (possible jailbreak)');
+      return { valid: false, reason: 'Out of character response' };
+    }
+  }
+
+  // Check for excessively long responses (possible DoS or jailbreak attempt)
+  const MAX_RESPONSE_LENGTH = 2000;
+  if (text.length > MAX_RESPONSE_LENGTH) {
+    console.warn('⚠️ SECURITY: Response exceeds maximum length');
+    return { valid: false, reason: 'Response too long' };
+  }
+
+  return { valid: true };
+}
+
 function parseOrders(text) {
   // Handle empty or whitespace-only text
   if (!text || text.trim().length === 0) {
     return {
       orders: [],
-      message: "I'm sorry, I couldn't generate a response. Please try again."
+      message: "I'm sorry, I couldn't generate a response. Please try again.",
+      meta: { clarify: false, clarify_question: null }
     };
   }
 
-  // New format: plain text message followed by "<<<ORDERS>>> [json]"
-  const ordersMarker = '<<<ORDERS>>>';
-  const ordersIndex = text.indexOf(ordersMarker);
-  
-  if (ordersIndex !== -1) {
-    // Extract message (everything before ORDERS:)
-    const message = text.substring(0, ordersIndex).trim();
-    
-    // Extract orders JSON (everything after ORDERS:)
-    const ordersText = text.substring(ordersIndex + ordersMarker.length).trim();
-    
-    let orders = [];
-    try {
-      if (ordersText && ordersText !== '[]') {
-        orders = JSON.parse(ordersText);
-      }
-    } catch (e) {
-      console.error('Error parsing orders JSON:', e);
-      // Continue with empty orders array
-    }
-    
-    return {
-      orders: orders,
-      message: message || "How can I help you?"
-    };
-  }
-
-  // Fallback: Try old JSON format for backward compatibility
-  try {
-    const parsed = JSON.parse(text);
-    const message = parsed.response || parsed.message || '';
-    
-    if (!message || message.trim().length === 0) {
-      return {
-        orders: parsed.orders || [],
-        message: "I received your message. How can I help you?"
-      };
-    }
-
-    return {
-      orders: parsed.orders || [],
-      message: message
-    };
-  } catch (e) {
-    // Not JSON, treat entire text as message
+  // Validate LLM output for security issues
+  const validation = validateLLMOutput(text);
+  if (!validation.valid) {
+    console.error('LLM output validation failed:', validation.reason);
     return {
       orders: [],
-      message: text.trim()
+      message: "I apologize, but I couldn't process that request properly. Please try rephrasing.",
+      meta: { clarify: false, clarify_question: null }
     };
   }
+
+  // New format: plain text message followed by JSON object on new line
+  // Expected format:
+  // Your friendly message here
+  // {"actions": [...], "meta": {...}}
+
+  const lines = text.trim().split('\n');
+  let message = '';
+  let actions = [];
+  let meta = { clarify: false, clarify_question: null };
+
+  // Try to find the JSON line (should contain "actions" field)
+  let jsonLineIndex = -1;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i].trim();
+    if (line.startsWith('{') && line.includes('"actions"')) {
+      jsonLineIndex = i;
+      break;
+    }
+  }
+
+  if (jsonLineIndex !== -1) {
+    // Extract message (everything before the JSON line)
+    message = lines.slice(0, jsonLineIndex).join('\n').trim();
+
+    // Extract and parse JSON line
+    const jsonLine = lines[jsonLineIndex].trim();
+    try {
+      const parsed = JSON.parse(jsonLine);
+      if (parsed.actions && Array.isArray(parsed.actions)) {
+        actions = normalizeOrders(parsed.actions);
+      }
+      if (parsed.meta) {
+        meta = parsed.meta;
+      }
+    } catch (e) {
+      console.error('Error parsing actions JSON:', e);
+      console.error('JSON line:', jsonLine);
+      // Continue with empty actions array
+    }
+  } else {
+    // Fallback: no JSON found, treat entire text as message
+    message = text.trim();
+  }
+
+  return {
+    orders: actions,
+    message: message || "How can I help you?",
+    meta: meta
+  };
 }
 
 // Chat service implementation
 const chatService = {
   processChat: async (call, callback) => {
     try {
-      const { text, history } = call.request;
+      const { text, history, user_id, cart_context } = call.request;
 
       // Format prompt and generate response
-      const prompt = formatPrompt(text, history || []);
+      const prompt = formatPrompt(text, history || [], cart_context || '');
 
       // Call llama service
       const response = await fetch(`${LLAMA_SERVICE_URL}/completion`, {
@@ -100,8 +212,7 @@ const chatService = {
         body: JSON.stringify({
           prompt,
           n_predict: 512,
-          temperature: 0.7,
-          stop: ['</s>', 'User:', 'Assistant:']
+          temperature: 0.7
         })
       });
 
@@ -130,8 +241,9 @@ const chatService = {
     let streamEnded = false;
 
     try {
-      const { text, history } = call.request;
-      const prompt = formatPrompt(text, history || []);
+      const { text, history, user_id, cart_context } = call.request;
+
+      const prompt = formatPrompt(text, history || [], cart_context || '');
 
       if (process.env.NODE_ENV === 'development') {
         console.log("=============== START PROMPT ===============")
@@ -149,7 +261,6 @@ const chatService = {
           prompt,
           n_predict: 512,
           temperature: 0.7,
-          stop: ['</s>', 'User:', 'Assistant:'],
           stream: true
         })
       });

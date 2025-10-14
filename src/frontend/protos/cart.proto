@@ -1,0 +1,56 @@
+// WARNING: This file is auto-generated. DO NOT MODIFY.
+syntax = "proto3";
+
+package cart;
+
+// The cart service definition
+service CartService {
+  // Add an item to the user's cart
+  rpc AddItem (AddItemRequest) returns (Cart) {}
+
+  // Remove an item from the user's cart
+  rpc RemoveItem (RemoveItemRequest) returns (Cart) {}
+
+  // Empty the user's cart
+  rpc EmptyCart (EmptyCartRequest) returns (Cart) {}
+
+  // Get the user's current cart
+  rpc GetCart (GetCartRequest) returns (Cart) {}
+}
+
+// Represents an item in the cart
+message CartItem {
+  string item = 1;
+  int32 quantity = 2;
+}
+
+// The user's cart
+message Cart {
+  string user_id = 1;
+  repeated CartItem items = 2;
+  int32 total_items = 3;
+}
+
+// Request to add an item to cart
+message AddItemRequest {
+  string user_id = 1;
+  string item = 2;
+  int32 quantity = 3;
+}
+
+// Request to remove an item from cart
+message RemoveItemRequest {
+  string user_id = 1;
+  string item = 2;
+  int32 quantity = 3;
+}
+
+// Request to empty the cart
+message EmptyCartRequest {
+  string user_id = 1;
+}
+
+// Request to get the cart
+message GetCartRequest {
+  string user_id = 1;
+}

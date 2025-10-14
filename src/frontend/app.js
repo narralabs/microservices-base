@@ -11,6 +11,7 @@ var loginRouter = require('./routes/login');
 var signupRouter = require('./routes/signup');
 var logoutRouter = require('./routes/logout');
 var chatRouter = require('./routes/chat');
+var cartRouter = require('./routes/cart');
 var { isAuthenticated } = require('./middleware/auth');
 
 var app = express();
@@ -53,6 +54,7 @@ app.use('/chat', chatRouter);
 app.use(isAuthenticated);
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/cart', cartRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

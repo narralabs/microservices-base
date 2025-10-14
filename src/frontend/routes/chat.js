@@ -25,13 +25,25 @@ const client = new chatProto.ChatService(
 
 // Handle chat requests
 router.post('/', async (req, res) => {
-  const { text } = req.body;
+  const { text, cart_items } = req.body;
+  const userId = req.session?.user?.id;
 
   if (!text) {
     return res.status(400).json({ error: 'Text is required' });
   }
 
-  client.processChat({ text }, (error, response) => {
+  // Prepare request with cart context
+  const request = {
+    text,
+    user_id: userId || ''
+  };
+
+  // Add cart items as context if available (as JSON)
+  if (cart_items && cart_items.length > 0) {
+    request.cart_context = JSON.stringify(cart_items);
+  }
+
+  client.processChat(request, (error, response) => {
     if (error) {
       console.error('Error processing chat:', error);
       return res.status(500).json({ error: 'Failed to process chat message' });
@@ -46,7 +58,8 @@ router.post('/', async (req, res) => {
 
 // Handle streaming chat requests
 router.post('/stream', (req, res) => {
-  const { text, history } = req.body;
+  const { text, history, cart_items } = req.body;
+  const userId = req.session?.user?.id;
 
   if (!text) {
     return res.status(400).json({ error: 'Text is required' });
@@ -65,8 +78,20 @@ router.post('/stream', (req, res) => {
 
   let streamEnded = false;
 
+  // Prepare request with cart context
+  const request = {
+    text,
+    history: history || [],
+    user_id: userId || ''
+  };
+
+  // Add cart items as context if available (as JSON)
+  if (cart_items && cart_items.length > 0) {
+    request.cart_context = JSON.stringify(cart_items);
+  }
+
   // Call gRPC streaming endpoint
-  const stream = client.streamChat({ text, history: history || [] });
+  const stream = client.streamChat(request);
 
   stream.on('data', (chunk) => {
     if (streamEnded) return;

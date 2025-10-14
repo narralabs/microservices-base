@@ -25,3 +25,16 @@ block content
           .chat-input
             input.message-input(type="text" placeholder="Type your order here..." autofocus)
             button.send-button Send
+
+      .cart-section
+        h2.cart-title Your Cart
+        .cart-content
+          .cart-items
+            // Cart items will appear here
+          .cart-summary
+            .cart-total
+              span.total-label Total Items:
+              span.total-count 0
+            .cart-actions
+              button.empty-cart-button.secondary-button Empty Cart
+              button.checkout-button.primary-button Checkout

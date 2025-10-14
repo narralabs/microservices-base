@@ -10,6 +10,7 @@ echo "Proto directory: $SCRIPT_DIR"
 mkdir -p "$SCRIPT_DIR/../src/frontend/protos"
 mkdir -p "$SCRIPT_DIR/../src/user-service/protos"
 mkdir -p "$SCRIPT_DIR/../src/chat-service/protos"
+mkdir -p "$SCRIPT_DIR/../src/cart-service/protos"
 
 # Copy app.proto to services that need it
 echo "Copying app.proto file to frontend"
@@ -36,5 +37,24 @@ cp "$SCRIPT_DIR"/chat.proto "$SCRIPT_DIR/../src/chat-service/protos"
 sed -i '' '1i\
 // WARNING: This file is auto-generated. DO NOT MODIFY.
 ' "$SCRIPT_DIR/../src/chat-service/protos/chat.proto"
+
+# Copy cart.proto to services that need it
+echo "Copying cart.proto file to frontend"
+cp "$SCRIPT_DIR"/cart.proto "$SCRIPT_DIR/../src/frontend/protos"
+sed -i '' '1i\
+// WARNING: This file is auto-generated. DO NOT MODIFY.
+' "$SCRIPT_DIR/../src/frontend/protos/cart.proto"
+
+echo "Copying cart.proto file to cart-service"
+cp "$SCRIPT_DIR"/cart.proto "$SCRIPT_DIR/../src/cart-service/protos"
+sed -i '' '1i\
+// WARNING: This file is auto-generated. DO NOT MODIFY.
+' "$SCRIPT_DIR/../src/cart-service/protos/cart.proto"
+
+echo "Copying cart.proto file to chat-service"
+cp "$SCRIPT_DIR"/cart.proto "$SCRIPT_DIR/../src/chat-service/protos"
+sed -i '' '1i\
+// WARNING: This file is auto-generated. DO NOT MODIFY.
+' "$SCRIPT_DIR/../src/chat-service/protos/cart.proto"
 
 echo "Proto update completed successfully!"

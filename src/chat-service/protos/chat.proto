@@ -22,6 +22,8 @@ message ChatMessage {
 message ChatRequest {
   string text = 1;
   repeated ChatMessage history = 2;
+  string user_id = 3;
+  string cart_context = 4;
 }
 
 // The response message containing the chat response and any orders
@@ -30,11 +32,12 @@ message ChatResponse {
   repeated Order orders = 2;
 }
 
-// Represents an order action (add or remove items)
+// Represents an order action (add, remove items, or empty cart)
 message Order {
   enum Action {
     ADD = 0;
     REMOVE = 1;
+    EMPTY_CART = 2;
   }
   Action action = 1;
   string item = 2;
