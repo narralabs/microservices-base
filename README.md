@@ -18,7 +18,7 @@ setup and supports running one-off containers. This is helpful when adding npm p
 skaffold + minikube does not support.
 
 1. Clone the repository
-2. Download the AI model into the `src/llama-service/models` folder: `curl -L "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf" -o src/llama-service/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf`
+2. Download the AI model into the `src/llama-service/models` folder: `curl -L "https://huggingface.co/unsloth/Llama-3.1-8B-Instruct-GGUF/resolve/main/Llama-3.1-8B-Instruct-Q4_K_M.gguf" -o src/llama-service/models/model.gguf`
 3. Start the services: `docker compose up`
 4. Open the frontend: `http://localhost:3000`
 
@@ -32,7 +32,7 @@ The local k8s requires that you download the model and server locally before sta
 up local builds since llama-service needs to download the model everytime before starting.
 
 1. Clone the repository
-2. Download the AI model once: `curl -L "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf" -o src/llama-service/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf`
+2. Download the AI model once: `curl -L "https://huggingface.co/unsloth/Llama-3.1-8B-Instruct-GGUF/resolve/main/Llama-3.1-8B-Instruct-Q4_K_M.gguf" -o src/llama-service/models/model.gguf`
 3. Start a local python server to serve the AI model: `cd src/llama-service/models && python3 -m http.server 8000`
 4. Start the k8s cluster: `minikube start`
 5. Run development environment: `skaffold dev`

@@ -61,7 +61,6 @@ services:
     volumes:
       - ./src/llama-service/models:/models
     environment:
-      - MODEL=/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf
       - N_GPU_LAYERS=0
       - N_CTX=2048
       - N_THREADS=4
@@ -74,7 +73,7 @@ services:
           memory: 4G
           cpus: '2'
     command: [
-      "--model", "/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+      "--model", "/models/model.gguf",
       "--host", "0.0.0.0", "--port", "8080",
       "--n-gpu-layers", "0",
       "--ctx-size", "2048",
@@ -90,8 +89,7 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
-      - LLAMA_SERVICE_URL=http://host.docker.internal:8080
-      - MODEL_PATH=/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf
+      - LLAMA_SERVICE_URL=http://llama-service:8080
     depends_on:
       - llama-service
     command: ["nodemon", "server.js"]

@@ -25,7 +25,7 @@ spec:
             - sh
             - -c
             - |
-              MODEL_FILE="/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
+              MODEL_FILE="/models/model.gguf"
 
               # Function to check if model exists
               verify_model() {
@@ -72,8 +72,6 @@ spec:
           ports:
             - containerPort: 8080
           env:
-            - name: MODEL
-              value: models/mistral-7b-instruct-v0.2.Q4_K_M.gguf
             - name: N_GPU_LAYERS
               value: "0"
             - name: N_CTX
@@ -83,6 +81,12 @@ spec:
           volumeMounts:
             - name: model-storage
               mountPath: /models
+          command: [
+            "--model", "/models/model.gguf",
+            "--host", "0.0.0.0", "--port", "8080",
+            "--n-gpu-layers", "0",
+            "--ctx-size", "2048",
+            "--threads", "4"]
       volumes:
         - name: model-storage
           persistentVolumeClaim:
