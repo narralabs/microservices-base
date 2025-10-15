@@ -28,6 +28,11 @@ spec:
               value: chat-service-k8s-service:50051
             - name: CART_SERVICE_URL
               value: cart-service-k8s-service:7002
+            - name: GOOGLE_ANALYTICS_ID
+              valueFrom:
+                secretKeyRef:
+                  name: frontend-secrets
+                  key: GOOGLE_ANALYTICS_ID
           command: ["nodemon", "./bin/www"]
 ---
 apiVersion: v1

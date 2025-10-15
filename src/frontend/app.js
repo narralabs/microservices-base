@@ -41,6 +41,7 @@ app.use(cookieSession({
 // Make user available in templates
 app.use((req, res, next) => {
   res.locals.user = req.session.user;
+  res.locals.gaTrackingId = process.env.GOOGLE_ANALYTICS_ID || null;
   next();
 });
 
