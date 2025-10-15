@@ -11,7 +11,22 @@ but is flexible enough to be replaced with other languages like Go, Python, etc.
 - [Skaffold](https://skaffold.dev/) (for simplifying development by automating building, pushing and deploying)
 - [Minikube](https://minikube.sigs.k8s.io/docs/) (for creating a local k8s cluster)
 
-## Local Development Using Docker Compose
+## Local Development Using Docker Compose and Local llama.cpp (not llama-service)
+
+This is the preferred local development set up especially when using a Mac or any virtualized docker environment.
+This speeds up local AI inference significantly. This will use docker for services
+except the llama-service, and instead points to the llama-service on your localhost:8080.
+Make sure to install llama.cpp via `brew install llama.cpp`
+
+### Running
+
+1. Clone the repository
+2. Download the AI model into the `src/llama-service/models` folder: `curl -L "https://huggingface.co/unsloth/Llama-3.1-8B-Instruct-GGUF/resolve/main/Llama-3.1-8B-Instruct-Q4_K_M.gguf" -o src/llama-service/models/model.gguf`
+3 Start llama service locally: `llama-server -m src/llama-service/models/model.gguf`
+4. Start the services: `docker compose up -f docker-compose.llama-local.yml`
+5. Open the frontend: `http://localhost:3000`
+
+## Local Development Using Docker Compose for All Services
 
 When developing locally we recommend that you use docker-compose. This is because docker-compose is easier to
 setup and supports running one-off containers. This is helpful when adding npm packages among other things that

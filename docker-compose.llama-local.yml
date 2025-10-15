@@ -1,0 +1,70 @@
+services:
+  frontend:
+    build:
+      context: ./src/frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - USER_SERVICE_URL=user-service:7000
+      - CHAT_SERVICE_URL=chat-service:50051
+      - CART_SERVICE_URL=cart-service:7002
+      - SESSION_SECRET=your-super-secret-key-change-in-production
+    command: nodemon ./bin/www
+    volumes:
+      - ./src/frontend:/app
+      - /app/node_modules
+    depends_on:
+      - user-service
+      - chat-service
+      - cart-service
+
+  user-service:
+    build:
+      context: ./src/user-service
+    ports:
+      - "7000"
+    environment:
+      - MONGODB_URL=mongodb://mongo-service:27017/microservices_development
+    command: nodemon server.js
+    volumes:
+      - ./src/user-service:/app
+      - /app/node_modules
+    depends_on:
+      - mongo-service
+
+  cart-service:
+    build:
+      context: ./src/cart-service
+    ports:
+      - "7002"
+    environment:
+      - MONGODB_URL=mongodb://mongo-service:27017/microservices_development
+    command: nodemon server.js
+    volumes:
+      - ./src/cart-service:/app
+      - /app/node_modules
+    depends_on:
+      - mongo-service
+
+  mongo-service:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  chat-service:
+    build:
+      context: ./src/chat-service
+    ports:
+      - "50051"
+    volumes:
+      - ./src/chat-service:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - LLAMA_SERVICE_URL=http://host.docker.internal:8080
+    command: ["nodemon", "server.js"]
+
+volumes:
+  mongodb_data:
