@@ -23,7 +23,7 @@ Make sure to install llama.cpp via `brew install llama.cpp`
 1. Clone the repository
 2. Download the AI model into the `src/llama-service/models` folder: `curl -L "https://huggingface.co/unsloth/Llama-3.1-8B-Instruct-GGUF/resolve/main/Llama-3.1-8B-Instruct-Q4_K_M.gguf" -o src/llama-service/models/model.gguf`
 3 Start llama service locally: `llama-server -m src/llama-service/models/model.gguf`
-4. Start the services: `docker compose up -f docker-compose.llama-local.yml`
+4. Start the services: `docker compose -f docker-compose.llama-local.yml up`
 5. Open the frontend: `http://localhost:3000`
 
 ## Local Development Using Docker Compose for All Services
