@@ -81,7 +81,7 @@ spec:
           volumeMounts:
             - name: model-storage
               mountPath: /models
-          command: [
+          args: [
             "--model", "/models/model.gguf",
             "--host", "0.0.0.0", "--port", "8080",
             "--n-gpu-layers", "0",
