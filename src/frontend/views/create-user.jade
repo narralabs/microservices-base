@@ -8,7 +8,7 @@ block content
     form.login-form(action="/signup" method="POST")
       .form-group
         label(for="firstName") First Name:
-        input#firstName(type="text" name="firstName" value=user ? user.first_name : '')
+        input#firstName(type="text" name="firstName" value=user ? user.first_name : '' autofocus)
       .form-group
         label(for="lastName") Last Name:
         input#lastName(type="text" name="lastName" value=user ? user.last_name : '')
