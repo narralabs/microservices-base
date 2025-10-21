@@ -6,7 +6,6 @@ var logger = require('morgan');
 var cookieSession = require('cookie-session');
 
 var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
 var loginRouter = require('./routes/login');
 var signupRouter = require('./routes/signup');
 var logoutRouter = require('./routes/logout');
@@ -63,8 +62,6 @@ app.use('/chat', chatRouter);
 // Protected routes
 app.use('/', indexRouter);
 app.use('/cart', cartRouter); // Cart is now accessible without authentication
-app.use(isAuthenticated);
-app.use('/users', usersRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
