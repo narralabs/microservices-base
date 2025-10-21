@@ -23,12 +23,17 @@ const client = new cartProto.CartService(
   grpc.credentials.createInsecure()
 );
 
+// Helper function to get user ID (authenticated or anonymous)
+function getUserId(req) {
+  return req.session?.user?.id || req.session?.anonymousId;
+}
+
 // Get cart
 router.get('/', async (req, res) => {
-  const userId = req.session?.user?.id;
+  const userId = getUserId(req);
 
   if (!userId) {
-    return res.status(401).json({ error: 'User not authenticated' });
+    return res.status(500).json({ error: 'Failed to identify user' });
   }
 
   client.getCart({ user_id: userId }, (error, response) => {
@@ -43,11 +48,11 @@ router.get('/', async (req, res) => {
 
 // Add item to cart
 router.post('/add', async (req, res) => {
-  const userId = req.session?.user?.id;
+  const userId = getUserId(req);
   const { item, quantity } = req.body;
 
   if (!userId) {
-    return res.status(401).json({ error: 'User not authenticated' });
+    return res.status(500).json({ error: 'Failed to identify user' });
   }
 
   if (!item || !quantity) {
@@ -66,11 +71,11 @@ router.post('/add', async (req, res) => {
 
 // Remove item from cart
 router.post('/remove', async (req, res) => {
-  const userId = req.session?.user?.id;
+  const userId = getUserId(req);
   const { item, quantity } = req.body;
 
   if (!userId) {
-    return res.status(401).json({ error: 'User not authenticated' });
+    return res.status(500).json({ error: 'Failed to identify user' });
   }
 
   if (!item || !quantity) {
@@ -89,10 +94,10 @@ router.post('/remove', async (req, res) => {
 
 // Empty cart
 router.post('/empty', async (req, res) => {
-  const userId = req.session?.user?.id;
+  const userId = getUserId(req);
 
   if (!userId) {
-    return res.status(401).json({ error: 'User not authenticated' });
+    return res.status(500).json({ error: 'Failed to identify user' });
   }
 
   client.emptyCart({ user_id: userId }, (error, response) => {

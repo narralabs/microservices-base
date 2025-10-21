@@ -15,6 +15,9 @@ service CartService {
 
   // Get the user's current cart
   rpc GetCart (GetCartRequest) returns (Cart) {}
+
+  // Merge anonymous cart into authenticated user's cart
+  rpc MergeCart (MergeCartRequest) returns (Cart) {}
 }
 
 // Represents an item in the cart
@@ -52,4 +55,10 @@ message EmptyCartRequest {
 // Request to get the cart
 message GetCartRequest {
   string user_id = 1;
+}
+
+// Request to merge anonymous cart into authenticated user's cart
+message MergeCartRequest {
+  string anonymous_user_id = 1;
+  string authenticated_user_id = 2;
 }

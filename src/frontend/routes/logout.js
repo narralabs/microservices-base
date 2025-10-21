@@ -3,11 +3,11 @@ var router = express.Router();
 
 /* GET logout page */
 router.get('/', function(req, res, next) {
-  // Clear the session
+  // Clear the session (a new anonymous ID will be generated on next request)
   req.session = null;
   
-  // Redirect to login page
-  res.redirect('/login');
+  // Redirect to home page (now accessible without login)
+  res.redirect('/');
 });
 
 module.exports = router;

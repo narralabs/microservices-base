@@ -231,6 +231,76 @@ async function getCart(call, callback) {
   }
 }
 
+async function mergeCart(call, callback) {
+  console.log('mergeCart called with:', call.request);
+  try {
+    const { anonymous_user_id, authenticated_user_id } = call.request;
+
+    // Validate inputs
+    if (!anonymous_user_id || !authenticated_user_id) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        details: 'anonymous_user_id and authenticated_user_id are required'
+      });
+    }
+
+    // Get anonymous cart
+    const anonymousCart = await db.collection('carts').findOne({ user_id: anonymous_user_id });
+
+    // If no anonymous cart or it's empty, just return authenticated user's cart
+    if (!anonymousCart || !anonymousCart.items || anonymousCart.items.length === 0) {
+      const authenticatedCart = await db.collection('carts').findOne({ user_id: authenticated_user_id });
+      return callback(null, buildCartResponse(authenticatedCart || { user_id: authenticated_user_id, items: [] }));
+    }
+
+    // Get or create authenticated user's cart
+    let authenticatedCart = await db.collection('carts').findOne({ user_id: authenticated_user_id });
+
+    if (!authenticatedCart) {
+      // No existing cart, just transfer anonymous cart items
+      authenticatedCart = {
+        user_id: authenticated_user_id,
+        items: [...anonymousCart.items]
+      };
+      await db.collection('carts').insertOne(authenticatedCart);
+    } else {
+      // Merge items: add quantities for duplicates, add new items
+      const mergedItems = [...authenticatedCart.items];
+
+      anonymousCart.items.forEach(anonItem => {
+        const existingIndex = mergedItems.findIndex(i => i.item === anonItem.item);
+        if (existingIndex >= 0) {
+          // Item exists, add quantities
+          mergedItems[existingIndex].quantity += anonItem.quantity;
+        } else {
+          // New item, add it
+          mergedItems.push({ item: anonItem.item, quantity: anonItem.quantity });
+        }
+      });
+
+      // Update authenticated cart
+      await db.collection('carts').updateOne(
+        { user_id: authenticated_user_id },
+        { $set: { items: mergedItems } }
+      );
+
+      authenticatedCart.items = mergedItems;
+    }
+
+    // Delete anonymous cart
+    await db.collection('carts').deleteOne({ user_id: anonymous_user_id });
+
+    console.log('Carts merged successfully for user:', authenticated_user_id);
+    callback(null, buildCartResponse(authenticatedCart));
+  } catch (err) {
+    console.error('Error merging carts:', err);
+    callback({
+      code: grpc.status.INTERNAL,
+      details: 'Internal server error'
+    });
+  }
+}
+
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, options);
 const cartProto = grpc.loadPackageDefinition(packageDefinition).cart;
 
@@ -246,7 +316,8 @@ async function main() {
         addItem,
         removeItem,
         emptyCart,
-        getCart
+        getCart,
+        mergeCart
       }
     );
 

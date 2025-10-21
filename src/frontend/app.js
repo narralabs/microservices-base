@@ -45,6 +45,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Generate anonymous user ID for unauthenticated users
+app.use((req, res, next) => {
+  // If user is not authenticated and doesn't have an anonymous ID, generate one
+  if (!req.session.user && !req.session.anonymousId) {
+    req.session.anonymousId = 'anon_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
+  }
+  next();
+});
+
 // Public routes
 app.use('/login', loginRouter);
 app.use('/signup', signupRouter);
@@ -52,10 +61,10 @@ app.use('/logout', logoutRouter);
 app.use('/chat', chatRouter);
 
 // Protected routes
-app.use(isAuthenticated);
 app.use('/', indexRouter);
+app.use('/cart', cartRouter); // Cart is now accessible without authentication
+app.use(isAuthenticated);
 app.use('/users', usersRouter);
-app.use('/cart', cartRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
