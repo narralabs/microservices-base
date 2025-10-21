@@ -15,7 +15,7 @@ html
             a.logout-link(href="/logout") Logout
         else
           .auth-links
-            a.login-link(href="/auth/login") Login
+            a.login-link(href="/login") Login
     block content
     if gaTrackingId
       script(async, src='https://www.googletagmanager.com/gtag/js?id=#{gaTrackingId}')
