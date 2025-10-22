@@ -68,22 +68,17 @@ spec:
               mountPath: /models
       containers:
         - name: llama-service
-          image: narralabs/llama-service:no-model
+          image: ghcr.io/ggml-org/llama.cpp:server
           ports:
             - containerPort: 8080
-          env:
-            - name: N_GPU_LAYERS
-              value: "0"
-            - name: N_CTX
-              value: "2048"
-            - name: N_THREADS
-              value: "4"
           volumeMounts:
             - name: model-storage
               mountPath: /models
-          args: [
+          command: [
+            "/app/llama-server",
             "--model", "/models/model.gguf",
-            "--host", "0.0.0.0", "--port", "8080",
+            "--host", "0.0.0.0",
+            "--port", "8080",
             "--n-gpu-layers", "0",
             "--ctx-size", "2048",
             "--threads", "4"]

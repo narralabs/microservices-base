@@ -54,10 +54,9 @@ services:
       - mongodb_data:/data/db
 
   llama-service:
-    build:
-      context: ./src/llama-service
+    image: ghcr.io/ggml-org/llama.cpp:server
     ports:
-      - "8080:8080"
+      - "8080"
     volumes:
       - ./src/llama-service/models:/models
     environment:
