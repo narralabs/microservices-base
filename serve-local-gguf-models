@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# Script to serve local GGUF model files for development
+# This allows the llama-service initContainer to download models from your local machine
+
+set -e
+
+MODELS_DIR="$(cd "$(dirname "$0")/src/llama-service/models" && pwd)"
+PORT=8000
+
+# Check if models directory exists
+if [ ! -d "$MODELS_DIR" ]; then
+    echo "Error: Models directory not found at $MODELS_DIR"
+    exit 1
+fi
+
+# Get local IP address
+LOCAL_IP="localhost"
+
+echo "=========================================="
+echo "Starting local GGUF model server"
+echo "=========================================="
+echo "Directory: $MODELS_DIR"
+echo "Port: $PORT"
+echo ""
+echo "Available files for download:"
+echo ""
+
+# List all files with download URLs
+cd "$MODELS_DIR"
+for file in *; do
+    if [ -f "$file" ]; then
+        size=$(ls -lh "$file" | awk '{print $5}')
+        echo "  $file ($size)"
+        echo "    → http://${LOCAL_IP}:${PORT}/${file}"
+        echo ""
+    fi
+done
+
+echo "=========================================="
+echo "Server running on http://${LOCAL_IP}:${PORT}"
+echo "Press Ctrl+C to stop"
+echo "=========================================="
+echo ""
+
+# Start the HTTP server
+python3 -m http.server $PORT
+
