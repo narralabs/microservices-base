@@ -12,8 +12,6 @@ spec:
       labels:
         app: frontend-k8s-pod
     spec:
-      nodeSelector:
-        role: worker
       containers:
         - name: frontend
           image: narralabs/frontend
