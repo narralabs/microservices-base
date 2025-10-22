@@ -15,6 +15,12 @@ var { isAuthenticated } = require('./middleware/auth');
 
 var app = express();
 
+let SESSION_SECRET = process.env.SESSION_SECRET;
+if (!SESSION_SECRET) {
+  console.warn('SESSION_SECRET environment variable is not set. Using default value.');
+  SESSION_SECRET = 'your-super-secret-key-change-in-production';
+}
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
@@ -22,16 +28,13 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-if (!process.env.SESSION_SECRET) {
-  throw new Error('SESSION_SECRET environment variable is required for secure cookie signing');
-}
-app.use(cookieParser(process.env.SESSION_SECRET));
+app.use(cookieParser(SESSION_SECRET));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Session configuration
 app.use(cookieSession({
   name: 'session',
-  keys: [process.env.SESSION_SECRET || 'your-super-secret-key-change-in-production'],
+  keys: [SESSION_SECRET],
   maxAge: 24 * 60 * 60 * 1000, // 24 hours
   secure: process.env.NODE_ENV === 'production',
   httpOnly: true

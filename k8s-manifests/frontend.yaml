@@ -21,7 +21,11 @@ spec:
             - name: USER_SERVICE_URL
               value: user-service-k8s-service:7000
             - name: SESSION_SECRET
-              value: your-super-secret-key-change-in-production
+              valueFrom:
+                secretKeyRef:
+                  name: frontend-secrets
+                  key: SESSION_SECRET
+                  optional: true
             - name: CHAT_SERVICE_URL
               value: chat-service-k8s-service:50051
             - name: CART_SERVICE_URL
