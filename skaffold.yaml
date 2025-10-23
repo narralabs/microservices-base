@@ -14,6 +14,8 @@ build:
       context: src/chat-service
     - image: narralabs/llama-service
       context: src/llama-service
+    - image: narralabs/speaches-service
+      context: src/speaches-service
 manifests:
   kustomize:
     paths:

@@ -78,6 +78,12 @@ services:
       "--ctx-size", "2048",
       "--threads", "4"]
 
+  speaches-service:
+    build:
+      context: ./src/speaches-service
+    ports:
+      - "8000"
+
   chat-service:
     build:
       context: ./src/chat-service
