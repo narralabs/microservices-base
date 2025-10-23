@@ -20,6 +20,18 @@ const chatProto = protoDescriptor.chat;
 // Llama service configuration
 const LLAMA_SERVICE_URL = process.env.LLAMA_SERVICE_URL || 'http://llama-service:8080';
 
+// Valid menu items (must match prompt template)
+const VALID_MENU_ITEMS = ['Espresso', 'Cappuccino', 'Cafe Latte', 'Macchiato'];
+
+// Validate if an item is on the menu (case-insensitive)
+function isValidMenuItem(item) {
+  if (!item || typeof item !== 'string') return false;
+  const normalizedItem = item.trim();
+  return VALID_MENU_ITEMS.some(validItem => 
+    validItem.toLowerCase() === normalizedItem.toLowerCase()
+  );
+}
+
 // Normalize order action from new format to enum value
 // Handles: ADD, REMOVE, EMPTY_CART, QUERY_CART
 // Enum values: 0=ADD, 1=REMOVE, 2=EMPTY_CART
@@ -36,6 +48,11 @@ function normalizeOrders(actions) {
 
     switch (type) {
       case 'ADD':
+        // Validate menu item before adding
+        if (!isValidMenuItem(action.item)) {
+          console.warn(`⚠️ SECURITY: Attempted to add invalid menu item: "${action.item}"`);
+          break; // Skip this action
+        }
         result.push({
           action: 0,
           item: action.item || '',
@@ -44,6 +61,11 @@ function normalizeOrders(actions) {
         break;
 
       case 'REMOVE':
+        // Validate menu item before removing
+        if (!isValidMenuItem(action.item)) {
+          console.warn(`⚠️ SECURITY: Attempted to remove invalid menu item: "${action.item}"`);
+          break; // Skip this action
+        }
         result.push({
           action: 1,
           item: action.item || '',
