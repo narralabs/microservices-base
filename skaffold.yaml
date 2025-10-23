@@ -16,6 +16,8 @@ build:
       context: src/llama-service
     - image: narralabs/speaches-service
       context: src/speaches-service
+    - image: narralabs/audio-service
+      context: src/audio-service
 manifests:
   kustomize:
     paths:

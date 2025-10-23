@@ -78,6 +78,20 @@ services:
       "--ctx-size", "2048",
       "--threads", "4"]
 
+  audio-service:
+    build:
+      context: ./src/audio-service
+    ports:
+      - "8001:8001"
+    environment:
+      - SPEACHES_SERVICE_URL=http://speaches-service:8000
+    command: nodemon server.js
+    volumes:
+      - ./src/audio-service:/app
+      - /app/node_modules
+    depends_on:
+      - speaches-service
+
   speaches-service:
     build:
       context: ./src/speaches-service
