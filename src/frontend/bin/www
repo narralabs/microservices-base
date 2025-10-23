@@ -22,6 +22,22 @@ app.set('port', port);
 var server = http.createServer(app);
 
 /**
+ * Setup Socket.IO
+ */
+const io = require('socket.io')(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+// Attach io to app for use in routes
+app.set('io', io);
+
+// Initialize realtime audio handler
+require('../routes/audio-realtime')(io);
+
+/**
  * Listen on provided port, on all network interfaces.
  */
 

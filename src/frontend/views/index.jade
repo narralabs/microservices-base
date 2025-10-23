@@ -16,6 +16,28 @@ block content
                 .item-price= item.price
               p.item-description= item.description
 
+      .audio-section
+        h2.audio-title Order via Voice
+        p.audio-description Click once to start a continuous conversation. Speak naturally, pause when done, and AI responds. Keeps listening until you click stop.
+        .audio-box
+          .audio-visualizer
+            .audio-visualizer-bars
+              .visualizer-bar
+              .visualizer-bar
+              .visualizer-bar
+              .visualizer-bar
+              .visualizer-bar
+              .visualizer-bar
+              .visualizer-bar
+              .visualizer-bar
+          button.record-button
+            span.record-icon
+            span Start Voice Order
+          .audio-status-text Click microphone to start voice order
+          .audio-transcription-display(style='display: none;')
+            .transcription-label Live Transcription:
+            .transcription-text
+
       .chat-section
         h2.chat-title Order via AI Chat
         p.chat-description Chat with our AI assistant to place your order. Our local LLM-powered system will help you customize your perfect coffee drink.

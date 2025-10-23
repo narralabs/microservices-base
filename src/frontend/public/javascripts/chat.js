@@ -265,4 +265,8 @@ document.addEventListener('DOMContentLoaded', () => {
       sendButton.click();
     }
   });
+
+  // Export functions for use by audio.js
+  window.addChatMessage = addMessage;
+  window.sendChatMessage = sendMessage;
 });

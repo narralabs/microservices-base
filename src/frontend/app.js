@@ -11,6 +11,7 @@ var signupRouter = require('./routes/signup');
 var logoutRouter = require('./routes/logout');
 var chatRouter = require('./routes/chat');
 var cartRouter = require('./routes/cart');
+var audioRouter = require('./routes/audio');
 var { isAuthenticated } = require('./middleware/auth');
 
 var app = express();
@@ -61,6 +62,7 @@ app.use('/login', loginRouter);
 app.use('/signup', signupRouter);
 app.use('/logout', logoutRouter);
 app.use('/chat', chatRouter);
+app.use('/audio', audioRouter);
 
 // Protected routes
 app.use('/', indexRouter);

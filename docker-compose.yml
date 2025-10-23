@@ -8,6 +8,7 @@ services:
       - USER_SERVICE_URL=user-service:7000
       - CHAT_SERVICE_URL=chat-service:50051
       - CART_SERVICE_URL=cart-service:7002
+      - AUDIO_SERVICE_URL=http://audio-service:8001
       - SESSION_SECRET=your-super-secret-key-change-in-production
     command: nodemon ./bin/www
     volumes:
@@ -17,6 +18,7 @@ services:
       - user-service
       - chat-service
       - cart-service
+      - audio-service
 
   user-service:
     build:
