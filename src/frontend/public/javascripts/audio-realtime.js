@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Initialize Socket.IO connection
+  // Initialize Socket.IO connection (connects to frontend server)
   function initSocket() {
     socket = io({
       transports: ['websocket', 'polling'],
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       // Initialize socket if not already connected
       if (!socket || !socket.connected) {
-        initSocket();
+        await initSocket();
         // Wait a bit for connection
         await new Promise(resolve => setTimeout(resolve, 500));
       }

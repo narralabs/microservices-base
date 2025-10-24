@@ -30,6 +30,8 @@ spec:
               value: chat-service-k8s-service:50051
             - name: CART_SERVICE_URL
               value: cart-service-k8s-service:7002
+            - name: AUDIO_SERVICE_URL
+              value: audio-service-k8s-service:8001
             - name: GOOGLE_ANALYTICS_ID
               valueFrom:
                 secretKeyRef:
