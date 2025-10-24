@@ -76,7 +76,8 @@ router.post('/tts', async (req, res) => {
       `${AUDIO_SERVICE_URL}/api/tts`,
       {
         text: text,
-        voice: voice || 'af_sky'
+        voice: voice || 'af_sky',
+        speed: 4
       },
       {
         responseType: 'arraybuffer',

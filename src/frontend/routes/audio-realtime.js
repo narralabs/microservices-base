@@ -11,14 +11,10 @@ module.exports = function(io) {
       transports: ['websocket', 'polling']
     });
 
-    // Forward audio stream to audio-service
-    socket.on('audio-stream', (data) => {
-      audioServiceSocket.emit('audio-stream', data);
-    });
-
-    // Forward audio-end to audio-service
-    socket.on('audio-end', () => {
-      audioServiceSocket.emit('audio-end');
+    // Forward complete audio to audio-service
+    socket.on('audio-complete', (data) => {
+      console.log('Received audio-complete from client, forwarding to audio-service');
+      audioServiceSocket.emit('audio-complete', data);
     });
 
     // Forward TTS request to audio-service
@@ -27,10 +23,6 @@ module.exports = function(io) {
     });
 
     // Forward responses from audio-service back to client
-    audioServiceSocket.on('audio-received', (data) => {
-      socket.emit('audio-received', data);
-    });
-
     audioServiceSocket.on('status', (data) => {
       socket.emit('status', data);
     });
@@ -40,6 +32,7 @@ module.exports = function(io) {
     });
 
     audioServiceSocket.on('tts-complete', (data) => {
+      console.log('Received tts-complete from audio-service, forwarding to client');
       socket.emit('tts-complete', data);
     });
 

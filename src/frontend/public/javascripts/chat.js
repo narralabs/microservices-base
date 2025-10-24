@@ -233,6 +233,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Re-enable the send button
                 sendButton.disabled = false;
+
+                // Emit event for voice assistant to request TTS
+                if (finalMessage) {
+                  window.dispatchEvent(new CustomEvent('chat-response-complete', {
+                    detail: { text: finalMessage }
+                  }));
+                }
               }
             } catch (error) {
               console.error('Error parsing SSE data:', error);

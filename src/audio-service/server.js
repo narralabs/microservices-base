@@ -59,6 +59,8 @@ app.post('/api/stt', upload.single('audio'), async (req, res) => {
 
     // Add required model parameter (use the available model in Speaches)
     formData.append('model', 'Systran/faster-distil-whisper-small.en');
+    // Disable VAD to prevent filtering out audio
+    formData.append('vad_filter', 'false');
 
     // Forward to speaches-service STT endpoint
     const response = await axios.post(
@@ -145,7 +147,9 @@ app.post('/api/voice-order', upload.single('audio'), async (req, res) => {
       filename: req.file.originalname || 'audio.webm',
       contentType: req.file.mimetype || 'audio/webm'
     });
-    formData.append('model', 'whisper-1');
+    formData.append('model', 'Systran/faster-distil-whisper-small.en');
+    // Disable VAD to prevent filtering out audio
+    formData.append('vad_filter', 'false');
 
     const sttResponse = await axios.post(
       `${SPEACHES_SERVICE_URL}/v1/audio/transcriptions`,
@@ -182,61 +186,34 @@ app.post('/api/voice-order', upload.single('audio'), async (req, res) => {
 io.on('connection', (socket) => {
   console.log('Client connected for realtime audio:', socket.id);
   
-  let audioChunks = [];
   let isProcessing = false;
 
-  // Handle audio stream from client
-  socket.on('audio-stream', async (data) => {
-    try {
-      // Don't accept new chunks if we're currently processing
-      if (isProcessing) {
-        console.log('Still processing previous audio, ignoring chunk');
-        return;
-      }
-      
-      console.log('Received audio chunk:', data.length, 'bytes');
-      
-      // Accumulate audio chunks
-      audioChunks.push(Buffer.from(data));
-      
-      // Send acknowledgment
-      socket.emit('audio-received', { 
-        size: data.length,
-        totalChunks: audioChunks.length 
-      });
-      
-    } catch (error) {
-      console.error('Error handling audio stream:', error);
-      socket.emit('error', { message: 'Failed to process audio stream' });
-    }
-  });
-
-  // Handle end of recording - process complete audio
-  socket.on('audio-end', async () => {
+  // Handle complete audio blob from client
+  socket.on('audio-complete', async (data) => {
     if (isProcessing) {
-      console.log('Already processing, ignoring duplicate audio-end');
+      console.log('Already processing, ignoring new audio');
       return;
     }
 
     isProcessing = true;
     
     try {
-      console.log('Processing complete audio with', audioChunks.length, 'chunks');
+      const { audio, mimeType } = data;
+      const audioBuffer = Buffer.from(audio);
       
-      if (audioChunks.length === 0) {
+      console.log('Received complete audio:', audioBuffer.length, 'bytes, mimeType:', mimeType);
+
+      // Debug: Save audio to file to inspect
+      const fs = require('fs');
+      const debugPath = `/tmp/debug_audio_${Date.now()}.webm`;
+      fs.writeFileSync(debugPath, audioBuffer);
+      console.log('Saved debug audio to:', debugPath);
+
+      if (audioBuffer.length === 0) {
         socket.emit('error', { message: 'No audio data received' });
-        setTimeout(() => {
-          isProcessing = false;
-        }, 100);
+        isProcessing = false;
         return;
       }
-
-      // Combine all chunks into single buffer
-      const audioBuffer = Buffer.concat(audioChunks);
-      console.log('Total audio size:', audioBuffer.length, 'bytes');
-      
-      // Clear chunks
-      audioChunks = [];
 
       // Send to speaches service for transcription
       socket.emit('status', { message: 'Transcribing audio...' });
@@ -244,11 +221,25 @@ io.on('connection', (socket) => {
       const formData = new FormData();
       const audioStream = Readable.from(audioBuffer);
       
+      // Determine filename based on mimeType
+      let filename = 'audio.webm';
+      let contentType = mimeType || 'audio/webm';
+      
+      if (mimeType && mimeType.includes('ogg')) {
+        filename = 'audio.ogg';
+      } else if (mimeType && mimeType.includes('webm')) {
+        filename = 'audio.webm';
+      }
+      
       formData.append('file', audioStream, {
-        filename: 'audio.webm',
-        contentType: 'audio/webm'
+        filename: filename,
+        contentType: contentType
       });
       formData.append('model', 'Systran/faster-distil-whisper-small.en');
+      // Disable VAD or use less aggressive settings
+      formData.append('vad_filter', 'false');
+      // Add language hint
+      formData.append('language', 'en');
 
       const sttResponse = await axios.post(
         `${SPEACHES_SERVICE_URL}/v1/audio/transcriptions`,
@@ -262,6 +253,7 @@ io.on('connection', (socket) => {
       );
 
       const transcribedText = sttResponse.data.text || sttResponse.data.transcription || '';
+      console.log('STT Response:', JSON.stringify(sttResponse.data));
       console.log('Transcribed text:', transcribedText);
 
       if (!transcribedText || transcribedText.trim() === '') {
@@ -269,9 +261,7 @@ io.on('connection', (socket) => {
           text: '',
           error: 'Could not understand audio. Please try again.'
         });
-        setTimeout(() => {
-          isProcessing = false;
-        }, 100);
+        isProcessing = false;
         return;
       }
 
@@ -292,7 +282,6 @@ io.on('connection', (socket) => {
         message: 'Failed to transcribe audio',
         details: error.response?.data || error.message
       });
-      audioChunks = [];
       isProcessing = false;
     }
   });
@@ -325,10 +314,12 @@ io.on('connection', (socket) => {
       );
 
       // Send audio data back to client
+      console.log('TTS generation complete, sending audio to client');
       socket.emit('tts-complete', {
         audio: Buffer.from(ttsResponse.data).toString('base64'),
         mimeType: 'audio/wav'
       });
+      console.log('TTS audio sent to client');
 
     } catch (error) {
       console.error('Error processing TTS:', error.response?.data || error.message);
@@ -342,14 +333,12 @@ io.on('connection', (socket) => {
   // Handle client disconnect
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
-    audioChunks = [];
     isProcessing = false;
   });
 
   // Handle errors
   socket.on('error', (error) => {
     console.error('Socket error:', error);
-    audioChunks = [];
     isProcessing = false;
   });
 });
