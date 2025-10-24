@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: speaches-service-k8s-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: speaches-service-k8s-pod
+  template:
+    metadata:
+      labels:
+        app: speaches-service-k8s-pod
+    spec:
+      containers:
+        - name: speaches-service
+          image: narralabs/speaches-service
+          ports:
+            - containerPort: 8000
+          env:
+            - name: HF_HOME
+              value: "/app/hf-hub-cache"
+          volumeMounts:
+            - name: model-storage
+              mountPath: /models
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: speaches-model-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: speaches-service-k8s-service
+spec:
+  selector:
+    app: speaches-service-k8s-pod
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP
+
