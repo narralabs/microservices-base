@@ -9,6 +9,7 @@ resources:
   - chat-service.yaml
   - llama-service.yaml
   - llama-storage.yaml
+  - audio-service.yaml
 configMapGenerator:
   - name: llama-config
     literals:
