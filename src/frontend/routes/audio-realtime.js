@@ -1,6 +1,6 @@
 const socketIOClient = require('socket.io-client');
 
-const AUDIO_SERVICE_URL = process.env.AUDIO_SERVICE_URL || 'http://audio-service-k8s-service:8001';
+const AUDIO_SERVICE_URL = `http://${process.env.AUDIO_SERVICE_URL || 'audio-service-k8s-service:8001'}`;
 
 module.exports = function(io) {
   io.on('connection', (socket) => {
