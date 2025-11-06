@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function showEmptyCart() {
     cachedCartItems = [];
     if (cartItemsList) {
-      cartItemsList.innerHTML = '<div class="cart-empty-state">Your cart is empty</div>';
+      cartItemsList.innerHTML = '<div class="cart-empty-state">your cart is empty</div>';
     }
     if (cartSubtotal) {
       cartSubtotal.textContent = '$0.00';

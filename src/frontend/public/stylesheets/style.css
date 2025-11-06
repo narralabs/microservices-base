@@ -1371,6 +1371,131 @@ button[type="submit"]:hover {
   font-size: 16px;
 }
 
+/* Voice Control Buttons */
+.voice-controls {
+  margin-top: 16px;
+  gap: 8px;
+}
+
+.voice-button {
+  background-color: #38220f;
+  color: white;
+  border: none;
+  border-radius: 999px;
+  height: 40px;
+  padding: 8px 20px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: -0.28px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.voice-button:hover {
+  background-color: rgba(56, 34, 15, 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(56, 34, 15, 0.2);
+}
+
+.voice-button:active {
+  transform: translateY(0);
+}
+
+.speak-to-agent-button {
+  background-color: #38220f;
+}
+
+.agent-listening-button {
+  background-color: #2563eb;
+  animation: pulse-listening 2s infinite;
+}
+
+.agent-listening-button:hover {
+  background-color: #1d4ed8;
+}
+
+@keyframes pulse-listening {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(37, 99, 235, 0);
+  }
+}
+
+.agent-speaking-button {
+  background-color: #059669;
+  animation: pulse-speaking 2s infinite;
+}
+
+.agent-speaking-button:hover {
+  background-color: #047857;
+}
+
+@keyframes pulse-speaking {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(5, 150, 105, 0);
+  }
+}
+
+.stop-voice-button {
+  background-color: #dc2626;
+}
+
+.stop-voice-button:hover {
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.2);
+}
+
+.agent-processing-button {
+  background-color: #f59e0b;
+  animation: pulse-processing 2s infinite;
+}
+
+.agent-processing-button:hover {
+  background-color: #d97706;
+}
+
+@keyframes pulse-processing {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
+  }
+}
+
+/* Audio Wave Visualizer */
+.audio-wave-visualizer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 40px;
+  width: 100%;
+  max-width: 200px;
+  padding: 8px 16px;
+  margin-top: 8px;
+}
+
+.wave-bar {
+  width: 4px;
+  height: 8px;
+  background-color: #2563eb;
+  border-radius: 2px;
+  transition: height 0.1s ease, opacity 0.1s ease;
+  /* No CSS animation - will be controlled by JavaScript based on actual audio */
+}
+
 /* Responsive design for smaller screens */
 @media (max-width: 1400px) {
   .main-content {

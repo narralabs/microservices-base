@@ -34,6 +34,24 @@ document.addEventListener('DOMContentLoaded', () => {
           cartIconButton.classList.remove('cart-icon-hidden');
         });
       }
+      
+      // Add welcome message from AI with typing animation
+      setTimeout(() => {
+        // Check if cart has items
+        let cartItems = [];
+        if (window.getCartItems) {
+          cartItems = window.getCartItems();
+        }
+        
+        if (cartItems && cartItems.length > 0) {
+          // Welcome back message if cart has items
+          typeMessage("Welcome back! How can I help you with your order today?", false, 40);
+        } else {
+          // Welcome message with menu items if cart is empty
+          typeMessage("Welcome! I'm here to help you order. Here's what we have available:\n\n• Espresso\n• Cappuccino\n• Cafe Latte\n• Macchiato\n\nWhat would you like to add to your cart?", false, 40);
+        }
+      }, 200);
+      
       // Focus on the message input after animation starts
       setTimeout(() => {
         if (messageInput) {
@@ -46,9 +64,57 @@ document.addEventListener('DOMContentLoaded', () => {
   function addMessage(text, isUser = false) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
-    messageDiv.textContent = text;
+    // Convert newlines to <br> tags for proper line breaks
+    const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    messageDiv.innerHTML = escapedText.replace(/\n/g, '<br>');
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  // Type message word by word to simulate AI generation
+  function typeMessage(text, isUser = false, speed = 50) {
+    return new Promise((resolve) => {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
+      chatMessages.appendChild(messageDiv);
+      
+      // Escape HTML first
+      const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      
+      // Split by word boundaries, keeping spaces and newlines
+      const words = escapedText.split(/(\s+|\n+)/);
+      let currentIndex = 0;
+      
+      function typeNextWord() {
+        if (currentIndex >= words.length) {
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+          resolve();
+          return;
+        }
+        
+        const word = words[currentIndex];
+        
+        // Handle newlines
+        if (word.includes('\n')) {
+          const newlineCount = (word.match(/\n/g) || []).length;
+          messageDiv.innerHTML += '<br>'.repeat(newlineCount);
+        } else {
+          // Handle regular text (words and spaces)
+          messageDiv.innerHTML += word;
+        }
+        
+        currentIndex++;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        // Variable speed: faster for spaces/newlines, slower for actual words
+        const trimmedWord = word.trim();
+        const isWhitespace = trimmedWord === '' || word.includes('\n');
+        const delay = isWhitespace ? speed / 4 : speed;
+        setTimeout(typeNextWord, delay);
+      }
+      
+      typeNextWord();
+    });
   }
 
   async function processOrders(orders) {
@@ -337,7 +403,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Export functions for use by audio.js
+  // Export functions for use by audio.js and audio-realtime.js
   window.addChatMessage = addMessage;
   window.sendChatMessage = sendMessage;
+  window.typeMessage = typeMessage;
 });

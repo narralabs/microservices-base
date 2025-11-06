@@ -34,6 +34,30 @@ block content
           button.bg-primary.text-white.border-none.rounded-full.h-10.w-10.min-w-10.p-0.text-base.cursor-pointer.transition-all.flex.items-center.justify-center.send-button ➤
       .mt-2.font-medium.text-sm.text-left.cart-status-message(class="sm:text-base" style="display: none; letter-spacing: -0.32px; color: rgba(56, 34, 15, 0.7);")
         // Cart status messages appear here
+      
+      // Voice UI Buttons
+      .flex.flex-col.gap-2.items-center.justify-center.mt-4.voice-controls
+        .flex.gap-2.items-center.justify-center.w-full
+          button.voice-button.speak-to-agent-button#speakToAgentButton(type="button" style="display: flex;")
+            span speak to agent
+          button.voice-button.agent-listening-button#agentListeningButton(type="button" style="display: none;")
+            span agent is listening
+          button.voice-button.agent-speaking-button#agentSpeakingButton(type="button" style="display: none;")
+            span agent is speaking
+          button.voice-button.agent-processing-button#agentProcessingButton(type="button" style="display: none;")
+            span processing...
+          button.voice-button.stop-voice-button#stopVoiceButton(type="button" style="display: none;")
+            span stop voice
+        // Audio Visualizer (shown when listening)
+        .audio-wave-visualizer#audioWaveVisualizer(style="display: none;")
+          .wave-bar
+          .wave-bar
+          .wave-bar
+          .wave-bar
+          .wave-bar
+          .wave-bar
+          .wave-bar
+          .wave-bar
 
     // Cart Panel (Figma Design)
     .cart-panel#cartPanel(style="display: none;")

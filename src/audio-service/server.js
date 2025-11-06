@@ -111,7 +111,7 @@ app.post('/api/tts', async (req, res) => {
         model: 'speaches-ai/Kokoro-82M-v1.0-ONNX-fp16',
         input: text,
         voice: voice || 'af_sky', // Default voice
-        speed: speed || 2 // Default to 2x speed (faster)
+        speed: speed || 4 // Default to 2x speed (faster)
       },
       {
         responseType: 'arraybuffer',

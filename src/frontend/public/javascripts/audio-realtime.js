@@ -1,7 +1,15 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const recordButton = document.querySelector('.record-button');
-  const audioStatusText = document.querySelector('.audio-status-text');
-  const audioVisualizerBars = document.querySelector('.audio-visualizer-bars');
+  const audioStatusText = document.querySelector('.audio-status-text'); // May not exist in v2 design
+  const audioVisualizerBars = document.querySelector('.audio-visualizer-bars'); // May not exist in v2 design
+  
+  // Voice UI buttons
+  const speakToAgentButton = document.getElementById('speakToAgentButton');
+  const agentListeningButton = document.getElementById('agentListeningButton');
+  const agentSpeakingButton = document.getElementById('agentSpeakingButton');
+  const agentProcessingButton = document.getElementById('agentProcessingButton');
+  const stopVoiceButton = document.getElementById('stopVoiceButton');
+  const audioWaveVisualizer = document.getElementById('audioWaveVisualizer');
 
   let socket = null;
   let mediaRecorder = null;
@@ -17,12 +25,60 @@ document.addEventListener('DOMContentLoaded', async () => {
   let isProcessingResponse = false; // Flag to prevent overlapping
   let currentAudio = null; // Track currently playing audio
   let recordedChunks = []; // Store audio chunks for complete blob
+  let maxAudioLevel = 0; // Track maximum audio level during recording
 
   // Check if browser supports required APIs
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    audioStatusText.textContent = 'Voice recording not supported in this browser';
-    recordButton.disabled = true;
+    if (audioStatusText) {
+      audioStatusText.textContent = 'Voice recording not supported in this browser';
+    }
+    if (recordButton) {
+      recordButton.disabled = true;
+    }
+    if (speakToAgentButton) {
+      speakToAgentButton.disabled = true;
+    }
     return;
+  }
+
+  // Function to update voice button visibility
+  function updateVoiceButtons(state) {
+    if (!speakToAgentButton || !agentListeningButton || !agentSpeakingButton || !agentProcessingButton || !stopVoiceButton) return;
+    
+    // Hide all buttons first
+    speakToAgentButton.style.display = 'none';
+    agentListeningButton.style.display = 'none';
+    agentSpeakingButton.style.display = 'none';
+    agentProcessingButton.style.display = 'none';
+    stopVoiceButton.style.display = 'none';
+    
+    // Show/hide audio visualizer
+    if (audioWaveVisualizer) {
+      if (state === 'listening') {
+        audioWaveVisualizer.style.display = 'flex';
+      } else {
+        audioWaveVisualizer.style.display = 'none';
+      }
+    }
+    
+    // Show the appropriate button based on state
+    switch(state) {
+      case 'idle':
+        speakToAgentButton.style.display = 'flex';
+        break;
+      case 'listening':
+        agentListeningButton.style.display = 'flex';
+        stopVoiceButton.style.display = 'flex'; // Show stop button when listening
+        break;
+      case 'speaking':
+        agentSpeakingButton.style.display = 'flex';
+        stopVoiceButton.style.display = 'flex'; // Show stop button when speaking
+        break;
+      case 'processing':
+        agentProcessingButton.style.display = 'flex';
+        stopVoiceButton.style.display = 'flex'; // Show stop button when processing
+        break;
+    }
   }
 
   // Handle response completion (called after TTS audio finishes playing)
@@ -32,7 +88,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     isProcessingResponse = false;
 
     if (continuousMode) {
-      audioStatusText.textContent = 'Your turn - Listening...';
+      // In continuous mode, we'll restart listening, so don't reset to idle yet
+      if (audioStatusText) {
+        audioStatusText.textContent = 'Your turn - Listening...';
+      }
       // Restart recording after a short delay (ding will play when startRecording is called)
       console.log(`[${timestamp}] Scheduling recording restart in 500ms`);
       setTimeout(() => {
@@ -40,117 +99,174 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log(`[${timestamp2}] Timeout fired, continuousMode:`, continuousMode, 'isRecording:', isRecording);
         if (continuousMode && !isRecording) {
           console.log(`[${timestamp2}] Restarting recording...`);
-          startRecording();
+          startRecording(); // This will update buttons to 'listening'
         }
       }, 500);
     } else {
-      audioStatusText.textContent = 'Click microphone to start voice order';
+      // Not in continuous mode, reset to idle
+      updateVoiceButtons('idle');
+      if (audioStatusText) {
+        audioStatusText.textContent = 'Click microphone to start voice order';
+      }
     }
   }
 
   // Initialize Socket.IO connection (connects to frontend server)
   function initSocket() {
-    socket = io({
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5
-    });
-
-    socket.on('connect', () => {
-      console.log('WebSocket connected:', socket.id);
-    });
-
-    socket.on('disconnect', () => {
-      console.log('WebSocket disconnected');
-    });
-
-    socket.on('audio-received', (data) => {
-      console.log('Audio chunk acknowledged:', data);
-    });
-
-    socket.on('status', (data) => {
-      console.log('Status update:', data.message);
-      audioStatusText.textContent = data.message;
-    });
-
-    socket.on('transcription-complete', async (data) => {
-      console.log('Transcription complete:', data);
-
-      // Stop recording immediately when we start processing
-      if (isRecording && continuousMode) {
-        console.log('Stopping recording to process response');
-        stopRecording();
-      }
-
-      if (data.error) {
-        audioStatusText.textContent = data.error;
-        if (continuousMode) {
-          setTimeout(() => {
-            audioStatusText.textContent = 'Listening... Speak now';
-            startRecording();
-          }, 2000);
-        } else {
-          setTimeout(() => {
-            audioStatusText.textContent = 'Click microphone to start voice order';
-          }, 3000);
-        }
+    return new Promise((resolve, reject) => {
+      if (socket && socket.connected) {
+        console.log('Socket already connected:', socket.id);
+        resolve();
         return;
       }
 
-      const transcribedText = data.text;
+      socket = io({
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5
+      });
 
-      if (!transcribedText || transcribedText.trim() === '') {
-        audioStatusText.textContent = 'Could not understand audio. Please try again.';
-        if (continuousMode) {
-          setTimeout(() => {
-            audioStatusText.textContent = 'Listening... Speak now';
-            startRecording();
-          }, 2000);
-        } else {
-          setTimeout(() => {
-            audioStatusText.textContent = 'Click microphone to start voice order';
-          }, 3000);
+      socket.on('connect', () => {
+        console.log('WebSocket connected:', socket.id);
+        resolve();
+      });
+
+      socket.on('connect_error', (error) => {
+        console.error('WebSocket connection error:', error);
+        reject(error);
+      });
+
+      socket.on('disconnect', () => {
+        console.log('WebSocket disconnected');
+      });
+
+      socket.on('audio-received', (data) => {
+        console.log('Audio chunk acknowledged:', data);
+      });
+
+      socket.on('status', (data) => {
+        console.log('Status update:', data.message);
+        if (audioStatusText) {
+          audioStatusText.textContent = data.message;
         }
-        return;
-      }
+      });
 
-      audioStatusText.textContent = `You said: "${transcribedText}"`;
-      isProcessingResponse = true;
+      socket.on('transcription-complete', async (data) => {
+        console.log('Transcription complete:', data);
 
-      // Show in chat
-      if (window.addChatMessage) {
-        window.addChatMessage(transcribedText, true);
-      }
+        // Stop recording immediately when we start processing
+        if (isRecording && continuousMode) {
+          console.log('Stopping recording to process response');
+          stopRecording();
+        }
 
-      // Send to chat service
-      audioStatusText.textContent = 'Processing your order...';
+        if (data.error) {
+          if (audioStatusText) {
+            audioStatusText.textContent = data.error;
+          }
+          if (continuousMode) {
+            setTimeout(() => {
+              if (audioStatusText) {
+                audioStatusText.textContent = 'Listening... Speak now';
+              }
+              startRecording();
+            }, 2000);
+          } else {
+            setTimeout(() => {
+              if (audioStatusText) {
+                audioStatusText.textContent = 'Click microphone to start voice order';
+              }
+            }, 3000);
+          }
+          return;
+        }
 
-      if (window.sendChatMessage) {
-        // Send the message - the chat will emit an event when complete
-        window.sendChatMessage(transcribedText);
-      } else {
-        handleResponseComplete();
-      }
-    });
+        const transcribedText = data.text;
 
-    socket.on('tts-complete', async (data) => {
-      const timestamp = new Date().toISOString();
-      console.log(`[${timestamp}] TTS complete, playing audio`);
-      audioStatusText.textContent = 'Assistant speaking...';
-      // Update button text when assistant is speaking
-      if (continuousMode) {
-        recordButton.innerHTML = '<span class="record-icon"></span><span>Stop Conversation</span>';
-      }
-      await playAudioFromBase64(data.audio, data.mimeType);
-    });
+        if (!transcribedText || transcribedText.trim() === '') {
+          if (audioStatusText) {
+            audioStatusText.textContent = 'Could not understand audio. Please try again.';
+          }
+          if (continuousMode) {
+            setTimeout(() => {
+              if (audioStatusText) {
+                audioStatusText.textContent = 'Listening... Speak now';
+              }
+              startRecording();
+            }, 2000);
+          } else {
+            setTimeout(() => {
+              if (audioStatusText) {
+                audioStatusText.textContent = 'Click microphone to start voice order';
+              }
+            }, 3000);
+          }
+          return;
+        }
 
-    socket.on('error', (data) => {
-      console.error('Socket error:', data);
-      audioStatusText.textContent = `Error: ${data.message}`;
-      setTimeout(() => {
-        audioStatusText.textContent = 'Click microphone to start voice order';
-      }, 3000);
+        if (audioStatusText) {
+          audioStatusText.textContent = `You said: "${transcribedText}"`;
+        }
+        isProcessingResponse = true;
+        
+        // Show processing state if in continuous mode, otherwise show idle
+        if (continuousMode) {
+          updateVoiceButtons('processing'); // Show "Processing..." button in continuous mode
+        } else {
+          updateVoiceButtons('idle'); // Show "Speak to Agent" button if not in continuous mode
+        }
+
+        // Show transcribed text in chat FIRST with typing animation for "live" feel
+        // Then start LLM streaming after transcription is displayed
+        if (window.typeMessage) {
+          // Use typing animation to show transcription as it appears (fast speed for "live" feel)
+          await window.typeMessage(transcribedText, true, 25);
+        } else if (window.addChatMessage) {
+          // Fallback to instant display if typeMessage not available
+          window.addChatMessage(transcribedText, true);
+        }
+
+        // Update status
+        if (audioStatusText) {
+          audioStatusText.textContent = 'Processing your order...';
+        }
+
+        // Now start LLM streaming AFTER transcription is displayed
+        if (window.sendChatMessage) {
+          // Send the message - the chat will stream the response
+          window.sendChatMessage(transcribedText);
+        } else {
+          handleResponseComplete();
+        }
+      });
+
+      socket.on('tts-complete', async (data) => {
+        const timestamp = new Date().toISOString();
+        console.log(`[${timestamp}] TTS complete, playing audio`);
+        if (audioStatusText) {
+          audioStatusText.textContent = 'Assistant speaking...';
+        }
+        updateVoiceButtons('speaking'); // Show "Agent is Speaking" button
+        // Update button text when assistant is speaking
+        if (continuousMode && recordButton) {
+          recordButton.innerHTML = '<span class="record-icon"></span><span>Stop Conversation</span>';
+        }
+        await playAudioFromBase64(data.audio, data.mimeType);
+      });
+
+      socket.on('error', (data) => {
+        console.error('Socket error:', data);
+        if (audioStatusText) {
+          audioStatusText.textContent = `Error: ${data.message}`;
+        }
+        updateVoiceButtons('idle');
+        setTimeout(() => {
+          if (audioStatusText) {
+            audioStatusText.textContent = 'Click microphone to start voice order';
+          }
+        }, 3000);
+      });
     });
   }
 
@@ -404,6 +520,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bufferLength = analyser.frequencyBinCount;
     dataArray = new Uint8Array(bufferLength);
 
+    // Start visualization - will use wave visualizer if bars don't exist
     console.log('Starting visualizer animation');
     visualize();
   }
@@ -422,11 +539,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     analyser.getByteFrequencyData(dataArray);
 
-    // Update visualizer bars
+    // Update visualizer bars (only if they exist)
+    if (!audioVisualizerBars) {
+      // Try to update wave visualizer instead
+      updateWaveVisualizer();
+      return;
+    }
+
     const bars = audioVisualizerBars.querySelectorAll('.visualizer-bar');
     if (bars.length === 0) {
-      console.warn('No visualizer bars found');
-      return;
+      updateWaveVisualizer();
+      return; // No visualizer bars found, skip
     }
 
     const step = Math.floor(dataArray.length / bars.length);
@@ -435,6 +558,58 @@ document.addEventListener('DOMContentLoaded', async () => {
       const value = dataArray[index * step];
       const height = (value / 255) * 100;
       bar.style.height = `${Math.max(5, height)}%`;
+    });
+  }
+
+  // Update wave visualizer with real-time audio data
+  function updateWaveVisualizer() {
+    if (!audioWaveVisualizer || !analyser || !dataArray) return;
+    
+    if (audioWaveVisualizer.style.display === 'none') return; // Don't update if hidden
+    
+    analyser.getByteFrequencyData(dataArray);
+    
+    const waveBars = audioWaveVisualizer.querySelectorAll('.wave-bar');
+    if (waveBars.length === 0) return;
+    
+    // Calculate overall volume to detect if there's actual voice input
+    let totalVolume = 0;
+    for (let i = 0; i < dataArray.length; i++) {
+      totalVolume += dataArray[i];
+    }
+    const averageVolume = totalVolume / dataArray.length;
+    
+    // Threshold for detecting voice (adjust as needed)
+    const VOICE_THRESHOLD = 5; // Minimum volume to show movement
+    
+    // Calculate average volume for each bar
+    const step = Math.floor(dataArray.length / waveBars.length);
+    
+    waveBars.forEach((bar, index) => {
+      const startIdx = index * step;
+      const endIdx = Math.min(startIdx + step, dataArray.length);
+      
+      // Calculate average for this bar's frequency range
+      let sum = 0;
+      for (let i = startIdx; i < endIdx; i++) {
+        sum += dataArray[i];
+      }
+      const barAverage = sum / (endIdx - startIdx);
+      
+      // Only show movement if there's actual voice input
+      if (averageVolume > VOICE_THRESHOLD) {
+        // Map to height (8px to 32px) based on actual audio
+        const height = 8 + (barAverage / 255) * 24;
+        bar.style.height = `${Math.max(8, Math.min(32, height))}px`;
+        
+        // Adjust opacity based on volume
+        const opacity = 0.4 + (barAverage / 255) * 0.6;
+        bar.style.opacity = opacity;
+      } else {
+        // No voice detected - show minimal/idle state
+        bar.style.height = '8px';
+        bar.style.opacity = 0.3;
+      }
     });
   }
 
@@ -467,28 +642,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bufferLength = vadAnalyser.frequencyBinCount;
     const vadDataArray = new Uint8Array(bufferLength);
 
-    const SILENCE_THRESHOLD = 5; // Much lower threshold - more sensitive to actual speech
-    const SILENCE_DURATION = 1500; // 1.5 seconds of silence to stop
-    const MIN_RECORDING_DURATION = 500; // Minimum 0.5 seconds before checking for silence
+    const SILENCE_THRESHOLD = 8; // Threshold for detecting silence in frequency domain (0-255 range)
+    const SILENCE_DURATION = 1500; // 1.5 seconds of silence to stop (reduced for faster response)
+    const MIN_RECORDING_DURATION = 300; // Minimum 0.3 seconds before checking for silence
     let silenceStart = null;
     let recordingStartTime = Date.now();
 
     function checkVAD() {
       if (!isRecording) return;
 
-      vadAnalyser.getByteTimeDomainData(vadDataArray);
+      // Use frequency data for better speech detection
+      vadAnalyser.getByteFrequencyData(vadDataArray);
 
-      // Calculate average volume
+      // Calculate average volume from frequency data (more accurate for speech)
       let sum = 0;
       for (let i = 0; i < bufferLength; i++) {
-        const value = Math.abs(vadDataArray[i] - 128);
-        sum += value;
+        sum += vadDataArray[i];
       }
       const average = sum / bufferLength;
       
-      // Log volume for debugging
-      if (Math.random() < 0.1) { // Log 10% of the time to avoid spam
-        console.log('Audio level:', average.toFixed(2));
+      // Track maximum audio level for quality check
+      if (average > maxAudioLevel) {
+        maxAudioLevel = average;
+      }
+      
+      // Log volume for debugging (more frequent for troubleshooting)
+      if (Math.random() < 0.2) { // Log 20% of the time
+        console.log('Audio level:', average.toFixed(2), 'Max:', maxAudioLevel.toFixed(2), 'Silence threshold:', SILENCE_THRESHOLD);
       }
 
       // Don't check for silence until minimum recording duration has passed
@@ -498,15 +678,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
+      // Only stop on silence if we've detected meaningful speech first
+      // This prevents stopping when user hasn't spoken yet
+      // Frequency data uses 0-255 range, so threshold is higher
+      const SPEECH_DETECTED_THRESHOLD = 15; // Adjusted for frequency domain (0-255 range)
+      const hasDetectedSpeech = maxAudioLevel >= SPEECH_DETECTED_THRESHOLD;
+
       if (average < SILENCE_THRESHOLD) {
         // Silence detected
-        if (silenceStart === null) {
-          silenceStart = Date.now();
-          console.log('Silence started');
-        } else if (Date.now() - silenceStart > SILENCE_DURATION) {
-          console.log('Silence detected for', SILENCE_DURATION, 'ms, stopping recording');
-          stopRecording();
-          return;
+        if (hasDetectedSpeech) {
+          // Only check for silence-based stop if we've already detected speech
+          if (silenceStart === null) {
+            silenceStart = Date.now();
+            console.log('Silence started (after speech detected)');
+          } else if (Date.now() - silenceStart > SILENCE_DURATION) {
+            console.log('Silence detected for', SILENCE_DURATION, 'ms after speech, stopping recording');
+            stopRecording();
+            return;
+          }
+        } else {
+          // No speech detected yet - keep listening, don't stop on silence
+          silenceStart = null; // Reset silence timer since we're still waiting for speech
         }
       } else {
         // Sound detected, reset silence timer
@@ -531,16 +723,37 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Start recording
-  async function startRecording() {
+  async function startRecording(playDing = true) {
     try {
-      // Play ding sound to indicate it's the user's turn to speak
-      playDingSound();
+      // Play ding sound to indicate it's the user's turn to speak (unless suppressed)
+      if (playDing) {
+        playDingSound();
+      }
 
-      // Initialize socket if not already connected
+      // Initialize socket if not already connected - wait for connection
       if (!socket || !socket.connected) {
-        await initSocket();
-        // Wait a bit for connection
-        await new Promise(resolve => setTimeout(resolve, 500));
+        console.log('Initializing socket connection...');
+        try {
+          await initSocket();
+          console.log('Socket connected successfully');
+        } catch (error) {
+          console.error('Failed to connect socket:', error);
+          if (audioStatusText) {
+            audioStatusText.textContent = 'Error: Could not connect to audio service';
+          }
+          updateVoiceButtons('idle');
+          return;
+        }
+      }
+
+      // Verify socket is connected before proceeding
+      if (!socket || !socket.connected) {
+        console.error('Socket not connected after initialization');
+        if (audioStatusText) {
+          audioStatusText.textContent = 'Error: Audio service not connected';
+        }
+        updateVoiceButtons('idle');
+        return;
       }
 
       // Get new audio stream only if we don't have one already (continuous mode reuses stream)
@@ -601,8 +814,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         audioBitsPerSecond: 128000  // 128 kbps for better quality
       });
 
-      // Clear previous chunks
+      // Clear previous chunks and reset max audio level
       recordedChunks = [];
+      maxAudioLevel = 0;
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -614,6 +828,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       mediaRecorder.onstop = async () => {
         console.log('Recording stopped, processing', recordedChunks.length, 'chunks');
+        console.log('Maximum audio level detected:', maxAudioLevel.toFixed(2));
 
         // Only pause visualizer, don't stop it in continuous mode
         if (!continuousMode) {
@@ -626,25 +841,93 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
         }
 
+        // Check if audio has meaningful content before sending
+        // Frequency data uses 0-255 range, so threshold is higher
+        const MIN_AUDIO_LEVEL = 15; // Adjusted for frequency domain (0-255 range)
+        if (maxAudioLevel < MIN_AUDIO_LEVEL) {
+          console.log('Audio level too low (', maxAudioLevel.toFixed(2), '), not sending. Likely silence or background noise.');
+          if (audioStatusText) {
+            audioStatusText.textContent = 'No speech detected. Please try again.';
+          }
+          // Reset max audio level for next recording
+          maxAudioLevel = 0;
+          // Clear chunks without sending
+          recordedChunks = [];
+          // In continuous mode, restart listening after a short delay
+          // Don't play ding again since we're just continuing to listen
+          if (continuousMode) {
+            setTimeout(() => {
+              if (audioStatusText) {
+                audioStatusText.textContent = 'Listening... Speak now';
+              }
+              startRecording(false); // Don't play ding when restarting after no speech detected
+            }, 1000);
+          } else {
+            updateVoiceButtons('idle');
+          }
+          return;
+        }
+
         // Create a complete blob from all chunks
-        if (recordedChunks.length > 0 && socket && socket.connected) {
+        if (recordedChunks.length > 0) {
+          if (!socket || !socket.connected) {
+            console.error('Socket not connected when trying to send audio!');
+            if (audioStatusText) {
+              audioStatusText.textContent = 'Error: Lost connection to audio service';
+            }
+            updateVoiceButtons('idle');
+            // Reset max audio level
+            maxAudioLevel = 0;
+            return;
+          }
+
           const audioBlob = new Blob(recordedChunks, { type: mimeType });
           console.log('Created audio blob:', audioBlob.size, 'bytes, type:', audioBlob.type);
           console.log('Chunks collected:', recordedChunks.length);
           console.log('Individual chunk sizes:', recordedChunks.map(c => c.size));
+          console.log('Audio quality check passed. Max level:', maxAudioLevel.toFixed(2));
+          
+          if (audioBlob.size === 0) {
+            console.error('Audio blob is empty!');
+            if (audioStatusText) {
+              audioStatusText.textContent = 'Error: No audio recorded';
+            }
+            updateVoiceButtons('idle');
+            maxAudioLevel = 0;
+            return;
+          }
           
           // Send the complete audio blob
           const arrayBuffer = await audioBlob.arrayBuffer();
-          console.log('Sending arrayBuffer size:', arrayBuffer.byteLength);
-          socket.emit('audio-complete', {
-            audio: arrayBuffer,
-            mimeType: mimeType
-          });
+          console.log('Sending arrayBuffer size:', arrayBuffer.byteLength, 'bytes to socket');
           
-          // Clear chunks
+          try {
+            socket.emit('audio-complete', {
+              audio: arrayBuffer,
+              mimeType: mimeType
+            });
+            console.log('Audio sent successfully to server');
+            if (audioStatusText) {
+              audioStatusText.textContent = 'Processing audio...';
+            }
+          } catch (error) {
+            console.error('Error sending audio:', error);
+            if (audioStatusText) {
+              audioStatusText.textContent = 'Error sending audio';
+            }
+            updateVoiceButtons('idle');
+          }
+          
+          // Clear chunks and reset max audio level
           recordedChunks = [];
+          maxAudioLevel = 0;
         } else {
-          console.error('No chunks recorded or socket not connected!');
+          console.error('No chunks recorded!');
+          if (audioStatusText) {
+            audioStatusText.textContent = 'Error: No audio recorded';
+          }
+          updateVoiceButtons('idle');
+          maxAudioLevel = 0;
         }
 
         // Stop all tracks only if not in continuous mode
@@ -659,21 +942,32 @@ document.addEventListener('DOMContentLoaded', async () => {
       isRecording = true;
 
       // Update UI
-      recordButton.classList.add('recording');
-      if (continuousMode) {
-        recordButton.innerHTML = '<span class="record-icon recording-icon"></span><span>Stop Conversation</span>';
-      } else {
-        recordButton.innerHTML = '<span class="record-icon recording-icon"></span><span>Recording... (auto-stops on silence)</span>';
+      updateVoiceButtons('listening'); // Show "Agent is Listening" button
+      if (recordButton) {
+        recordButton.classList.add('recording');
+        if (continuousMode) {
+          recordButton.innerHTML = '<span class="record-icon recording-icon"></span><span>Stop Conversation</span>';
+        } else {
+          recordButton.innerHTML = '<span class="record-icon recording-icon"></span><span>Recording... (auto-stops on silence)</span>';
+        }
       }
-      audioStatusText.textContent = 'Listening... Speak now';
-      audioVisualizerBars.classList.add('active');
+      if (audioStatusText) {
+        audioStatusText.textContent = 'Listening... Speak now';
+      }
+      if (audioVisualizerBars) {
+        audioVisualizerBars.classList.add('active');
+      }
+      // Note: audioVisualizerBars may not exist in v2 design - that's OK
 
     } catch (error) {
       console.error('Error starting recording:', error);
-      audioStatusText.textContent = 'Error: Could not access microphone';
-      setTimeout(() => {
-        audioStatusText.textContent = 'Click microphone to start voice order';
-      }, 3000);
+      if (audioStatusText) {
+        audioStatusText.textContent = 'Error: Could not access microphone';
+        setTimeout(() => {
+          audioStatusText.textContent = 'Click microphone to start voice order';
+        }, 3000);
+      }
+      updateVoiceButtons('idle');
     }
   }
 
@@ -683,11 +977,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       isRecording = false;
       mediaRecorder.stop();
 
-      // Update UI
-      recordButton.classList.remove('recording');
-      recordButton.innerHTML = '<span class="record-icon"></span><span>Start Voice Order</span>';
-      audioStatusText.textContent = 'Processing audio...';
-      audioVisualizerBars.classList.remove('active');
+      // Update UI - show processing if in continuous mode, otherwise show idle
+      if (continuousMode) {
+        updateVoiceButtons('processing'); // Show "Processing..." button in continuous mode
+      } else {
+        updateVoiceButtons('idle'); // Show "Speak to Agent" button if not in continuous mode
+      }
+      if (recordButton) {
+        recordButton.classList.remove('recording');
+        recordButton.innerHTML = '<span class="record-icon"></span><span>Start Voice Order</span>';
+      }
+      if (audioStatusText) {
+        audioStatusText.textContent = 'Processing audio...';
+      }
+      if (audioVisualizerBars) {
+        audioVisualizerBars.classList.remove('active');
+      }
+      // Note: audioVisualizerBars may not exist in v2 design - that's OK
 
       // Clear any silence timeout
       if (silenceTimeout) {
@@ -701,6 +1007,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function stopContinuousMode() {
     continuousMode = false;
     isProcessingResponse = false;
+    maxAudioLevel = 0; // Reset max audio level
 
     // Stop any currently playing audio
     if (currentAudio) {
@@ -732,52 +1039,103 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Update UI
-    recordButton.classList.remove('recording', 'continuous-mode');
-    recordButton.innerHTML = '<span class="record-icon"></span><span>Start Voice Order</span>';
-    audioStatusText.textContent = 'Click microphone to start voice order';
-    audioVisualizerBars.classList.remove('active');
+    updateVoiceButtons('idle'); // Show "Speak to Agent" button
+    if (recordButton) {
+      recordButton.classList.remove('recording', 'continuous-mode');
+      recordButton.innerHTML = '<span class="record-icon"></span><span>Start Voice Order</span>';
+    }
+    if (audioStatusText) {
+      audioStatusText.textContent = 'Click microphone to start voice order';
+    }
+    if (audioVisualizerBars) {
+      audioVisualizerBars.classList.remove('active');
+    }
+    // Note: audioVisualizerBars may not exist in v2 design - that's OK
   }
 
   // Toggle recording
-  recordButton.addEventListener('click', () => {
-    // Unlock audio playback on first interaction (Safari requirement)
-    if (!audioContext || audioContext.state === 'closed') {
-      const unlockAudio = new (window.AudioContext || window.webkitAudioContext)();
-      const silentSource = unlockAudio.createBufferSource();
-      silentSource.buffer = unlockAudio.createBuffer(1, 1, 22050);
-      silentSource.connect(unlockAudio.destination);
-      silentSource.start(0);
-      console.log('Audio unlocked for autoplay');
-    }
-    
-    if (continuousMode) {
-      // Stop continuous mode
+  if (recordButton) {
+    recordButton.addEventListener('click', () => {
+      // Unlock audio playback on first interaction (Safari requirement)
+      if (!audioContext || audioContext.state === 'closed') {
+        const unlockAudio = new (window.AudioContext || window.webkitAudioContext)();
+        const silentSource = unlockAudio.createBufferSource();
+        silentSource.buffer = unlockAudio.createBuffer(1, 1, 22050);
+        silentSource.connect(unlockAudio.destination);
+        silentSource.start(0);
+        console.log('Audio unlocked for autoplay');
+      }
+      
+      if (continuousMode) {
+        // Stop continuous mode
+        stopContinuousMode();
+      } else if (isRecording) {
+        // Single shot mode - stop recording
+        stopRecording();
+      } else {
+        // Start continuous mode
+        continuousMode = true;
+        recordButton.classList.add('continuous-mode');
+        startRecording();
+      }
+    });
+  }
+
+  // "Speak to Agent" button click handler
+  if (speakToAgentButton) {
+    speakToAgentButton.addEventListener('click', () => {
+      // Unlock audio playback on first interaction (Safari requirement)
+      if (!audioContext || audioContext.state === 'closed') {
+        const unlockAudio = new (window.AudioContext || window.webkitAudioContext)();
+        const silentSource = unlockAudio.createBufferSource();
+        silentSource.buffer = unlockAudio.createBuffer(1, 1, 22050);
+        silentSource.connect(unlockAudio.destination);
+        silentSource.start(0);
+        console.log('Audio unlocked for autoplay');
+      }
+      
+      // Start continuous voice conversation mode
+      if (!continuousMode && !isRecording) {
+        continuousMode = true;
+        if (recordButton) {
+          recordButton.classList.add('continuous-mode');
+        }
+        startRecording();
+      }
+    });
+  }
+
+  // "Stop Voice" button click handler
+  if (stopVoiceButton) {
+    stopVoiceButton.addEventListener('click', () => {
+      console.log('Stop voice button clicked');
       stopContinuousMode();
-    } else if (isRecording) {
-      // Single shot mode - stop recording
-      stopRecording();
-    } else {
-      // Start continuous mode
-      continuousMode = true;
-      recordButton.classList.add('continuous-mode');
-      startRecording();
-    }
-  });
+    });
+  }
 
   // Listen for chat response completion to trigger TTS
   window.addEventListener('chat-response-complete', (event) => {
-    if (!isProcessingResponse) return; // Only process if we're in voice mode
+    // Only process if we're in voice mode (continuous mode or processing response)
+    if (!continuousMode && !isProcessingResponse) return;
 
     const timestamp = new Date().toISOString();
     const responseText = event.detail.text;
     console.log(`[${timestamp}] Chat response complete, requesting TTS for:`, responseText);
 
+    // Mark that we're processing a response
+    isProcessingResponse = true;
+
     if (responseText && responseText.trim()) {
-      socket.emit('tts-request', {
-        text: responseText,
-        voice: 'af_sky'
-      });
-      console.log(`[${timestamp}] TTS request sent`);
+      if (socket && socket.connected) {
+        socket.emit('tts-request', {
+          text: responseText,
+          voice: 'af_sky'
+        });
+        console.log(`[${timestamp}] TTS request sent`);
+      } else {
+        console.error('Socket not connected, cannot request TTS');
+        handleResponseComplete();
+      }
     } else {
       // No text to speak, just complete the response
       console.log(`[${timestamp}] No text to speak, completing response`);
@@ -785,7 +1143,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Initialize socket on page load
-  initSocket();
 });
 
