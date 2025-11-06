@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let recordedChunks = []; // Store audio chunks for complete blob
   let maxAudioLevel = 0; // Track maximum audio level during recording
   let silenceStart = null; // Track when silence started (for VAD)
+  let speakingAnimationId = null; // Animation ID for speaking mode waves
 
   // Check if browser supports required APIs
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -56,10 +57,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Show/hide audio visualizer
     if (audioWaveVisualizer) {
-      if (state === 'listening') {
+      if (state === 'listening' || state === 'speaking') {
         audioWaveVisualizer.style.display = 'flex';
+        // Start speaking animation if in speaking mode
+        if (state === 'speaking') {
+          startSpeakingWaveAnimation();
+        } else {
+          stopSpeakingWaveAnimation();
+        }
       } else {
         audioWaveVisualizer.style.display = 'none';
+        stopSpeakingWaveAnimation();
       }
     }
     
@@ -545,7 +553,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const frameStartTime = performance.now();
     
     // Check if we should stop immediately (if recording stopped or processing)
-    if (!isRecording || animationId === null) {
+    if (!isRecording) {
       // Stop animation immediately
       if (animationId) {
         cancelAnimationFrame(animationId);
@@ -558,7 +566,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     animationId = requestAnimationFrame(visualize);
 
     if (!analyser || !dataArray) {
-      console.warn('Analyser or dataArray not initialized');
+      console.warn('[VISUALIZE] Analyser or dataArray not initialized');
       return;
     }
 
@@ -595,38 +603,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // Still speaking - continue animating waves
-    // Update visualizer bars (only if they exist)
-    if (!audioVisualizerBars) {
-      // Try to update wave visualizer instead
-      updateWaveVisualizer();
-      return;
+    // ALWAYS update wave visualizer if it's visible (for listening mode)
+    if (audioWaveVisualizer) {
+      const displayStyle = window.getComputedStyle(audioWaveVisualizer).display;
+      if (displayStyle !== 'none') {
+        updateWaveVisualizer();
+      } else {
+        // Log why we're not updating (less frequently)
+        if (Math.random() < 0.02) { // Log 2% of the time
+          console.log('[VISUALIZE] Wave visualizer hidden, display:', displayStyle);
+        }
+      }
+    } else {
+      if (Math.random() < 0.02) { // Log 2% of the time
+        console.log('[VISUALIZE] No wave visualizer element found!');
+      }
     }
-
-    const bars = audioVisualizerBars.querySelectorAll('.visualizer-bar');
-    if (bars.length === 0) {
-      updateWaveVisualizer();
-      return; // No visualizer bars found, skip
+    
+    // Also update visualizer bars if they exist (legacy support)
+    if (audioVisualizerBars) {
+      const bars = audioVisualizerBars.querySelectorAll('.visualizer-bar');
+      if (bars.length > 0) {
+        const step = Math.floor(dataArray.length / bars.length);
+        bars.forEach((bar, index) => {
+          const value = dataArray[index * step];
+          const height = (value / 255) * 100;
+          bar.style.height = `${Math.max(5, height)}%`;
+        });
+      }
     }
-
-    const step = Math.floor(dataArray.length / bars.length);
-
-    bars.forEach((bar, index) => {
-      const value = dataArray[index * step];
-      const height = (value / 255) * 100;
-      bar.style.height = `${Math.max(5, height)}%`;
-    });
   }
 
   // Update wave visualizer with real-time audio data
   function updateWaveVisualizer() {
-    if (!audioWaveVisualizer || !analyser || !dataArray) return;
+    if (!audioWaveVisualizer || !analyser || !dataArray) {
+      console.log('[WAVE_VIZ] Skipping update - missing components:', {
+        hasVisualizer: !!audioWaveVisualizer,
+        hasAnalyser: !!analyser,
+        hasDataArray: !!dataArray
+      });
+      return;
+    }
     
-    if (audioWaveVisualizer.style.display === 'none') return; // Don't update if hidden
+    const displayStyle = window.getComputedStyle(audioWaveVisualizer).display;
+    if (displayStyle === 'none') {
+      console.log('[WAVE_VIZ] Skipping update - visualizer is hidden (computed display:', displayStyle, ')');
+      return; // Don't update if hidden
+    }
     
     analyser.getByteFrequencyData(dataArray);
     
     const waveBars = audioWaveVisualizer.querySelectorAll('.wave-bar');
-    if (waveBars.length === 0) return;
+    if (waveBars.length === 0) {
+      console.log('[WAVE_VIZ] No wave bars found! Visualizer element:', audioWaveVisualizer);
+      return;
+    }
     
     // Calculate overall volume to detect if there's actual voice input
     let totalVolume = 0;
@@ -637,6 +668,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Threshold for detecting voice (adjust as needed)
     const VOICE_THRESHOLD = 5; // Minimum volume to show movement
+    
+    // Log audio levels periodically for debugging (more frequent initially)
+    if (Math.random() < 0.15) { // Log 15% of the time
+      console.log('[WAVE_VIZ] Audio levels:', {
+        averageVolume: averageVolume.toFixed(2),
+        maxLevel: Math.max(...Array.from(dataArray)).toFixed(2),
+        threshold: VOICE_THRESHOLD,
+        isRecording: isRecording,
+        waveBarsCount: waveBars.length,
+        visualizerDisplay: displayStyle,
+        aboveThreshold: averageVolume > VOICE_THRESHOLD
+      });
+    }
     
     // Calculate average volume for each bar
     const step = Math.floor(dataArray.length / waveBars.length);
@@ -667,6 +711,59 @@ document.addEventListener('DOMContentLoaded', async () => {
         bar.style.opacity = 0.3;
       }
     });
+  }
+
+  // Start speaking wave animation (when agent is speaking)
+  function startSpeakingWaveAnimation() {
+    if (!audioWaveVisualizer || speakingAnimationId) return; // Already animating
+    
+    const waveBars = audioWaveVisualizer.querySelectorAll('.wave-bar');
+    if (waveBars.length === 0) return;
+    
+    let frame = 0;
+    
+    function animate() {
+      if (!audioWaveVisualizer || audioWaveVisualizer.style.display === 'none') {
+        stopSpeakingWaveAnimation();
+        return;
+      }
+      
+      waveBars.forEach((bar, index) => {
+        // Create a wave pattern using sine wave
+        // Each bar has a different phase offset for a wave effect
+        const phase = (frame * 0.1) + (index * 0.5);
+        const wave = Math.sin(phase);
+        // Map wave from -1 to 1 to height from 8px to 32px
+        const height = 8 + (wave + 1) * 12; // 8px base + up to 24px variation
+        bar.style.height = `${height}px`;
+        
+        // Adjust opacity based on wave position
+        const opacity = 0.5 + (wave + 1) * 0.25; // 0.5 to 1.0
+        bar.style.opacity = opacity;
+      });
+      
+      frame++;
+      speakingAnimationId = requestAnimationFrame(animate);
+    }
+    
+    animate();
+  }
+  
+  // Stop speaking wave animation
+  function stopSpeakingWaveAnimation() {
+    if (speakingAnimationId) {
+      cancelAnimationFrame(speakingAnimationId);
+      speakingAnimationId = null;
+    }
+    
+    // Reset wave bars to default state
+    if (audioWaveVisualizer) {
+      const waveBars = audioWaveVisualizer.querySelectorAll('.wave-bar');
+      waveBars.forEach((bar) => {
+        bar.style.height = '8px';
+        bar.style.opacity = '0.3';
+      });
+    }
   }
 
   // Stop visualizer
@@ -988,9 +1085,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Resume visualization if analyser exists
         console.log('Resuming existing visualizer');
         if (!animationId) {
+          console.log('[START_RECORDING] Starting visualization loop');
           visualize();
+        } else {
+          console.log('[START_RECORDING] Visualization already running, animationId:', animationId);
         }
       }
+      
+      // Log visualizer state
+      console.log('[START_RECORDING] Visualizer state:', {
+        hasAnalyser: !!analyser,
+        hasAudioContext: !!audioContext,
+        audioContextState: audioContext?.state,
+        hasDataArray: !!dataArray,
+        animationId: animationId,
+        waveVisualizerDisplay: audioWaveVisualizer?.style.display,
+        waveVisualizerExists: !!audioWaveVisualizer
+      });
 
       // Setup simple VAD
       setupSimpleVAD(audioStream);
@@ -1154,6 +1265,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Start recording with timeslices to ensure we get chunks
       mediaRecorder.start(100); // Request chunks every 100ms
       isRecording = true;
+      
+      // NOW start visualization (after isRecording is set to true)
+      // This ensures the animation loop actually runs
+      if (!analyser || !audioContext || audioContext.state === 'closed') {
+        console.log('[START_RECORDING] Visualizer not initialized, initializing now');
+        initAudioVisualizer(audioStream);
+      } else if (!animationId) {
+        console.log('[START_RECORDING] Starting visualization loop after isRecording set');
+        visualize();
+      }
 
       // Update UI
       updateVoiceButtons('listening'); // Show "Agent is Listening" button
@@ -1272,6 +1393,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       cancelAnimationFrame(animationId);
       animationId = null;
     }
+    // Stop speaking animation if running
+    stopSpeakingWaveAnimation();
     if (audioContext && audioContext.state !== 'closed') {
       audioContext.close();
       audioContext = null;
