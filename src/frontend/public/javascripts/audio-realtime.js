@@ -21,11 +21,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   let animationId = null;
   let vadInstance = null;
   let silenceTimeout = null;
+  let maxDurationTimeout = null; // Maximum recording duration timeout
   let continuousMode = false; // Continuous listening mode
   let isProcessingResponse = false; // Flag to prevent overlapping
   let currentAudio = null; // Track currently playing audio
   let recordedChunks = []; // Store audio chunks for complete blob
   let maxAudioLevel = 0; // Track maximum audio level during recording
+  let silenceStart = null; // Track when silence started (for VAD)
 
   // Check if browser supports required APIs
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -146,9 +148,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
 
       socket.on('status', (data) => {
-        console.log('Status update:', data.message);
+        console.log('Status update from server:', data.message);
+        // Update UI to show we're actively transcribing
+        updateVoiceButtons('processing');
+        // Stop waves if they're still showing
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+          animationId = null;
+        }
+        if (audioWaveVisualizer) {
+          audioWaveVisualizer.style.display = 'none';
+        }
+        if (audioVisualizerBars) {
+          audioVisualizerBars.classList.remove('active');
+        }
         if (audioStatusText) {
-          audioStatusText.textContent = data.message;
+          audioStatusText.textContent = data.message || 'Transcribing audio...';
         }
       });
 
@@ -527,9 +542,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Visualize audio levels
   function visualize() {
-    // Don't check isRecording here - let it run as long as animationId is active
-    // This allows it to continue in continuous mode
+    const frameStartTime = performance.now();
+    
+    // Check if we should stop immediately (if recording stopped or processing)
+    if (!isRecording || animationId === null) {
+      // Stop animation immediately
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      return;
+    }
 
+    // Schedule next frame AFTER checking if we should continue
     animationId = requestAnimationFrame(visualize);
 
     if (!analyser || !dataArray) {
@@ -538,7 +563,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     analyser.getByteFrequencyData(dataArray);
-
+    
+    // Calculate current audio level for immediate detection
+    let sum = 0;
+    for (let i = 0; i < dataArray.length; i++) {
+      sum += dataArray[i];
+    }
+    const currentLevel = sum / dataArray.length;
+    
+    // IMMEDIATE silence detection in visualizer - stop waves instantly when silence detected
+    // This runs every frame (~60fps) for instant response
+    // BUT: Only stop waves if we've actually detected speech (maxAudioLevel > threshold)
+    // This prevents stopping waves due to background noise before user speaks
+    if (isRecording && silenceStart !== null && maxAudioLevel >= 20) {
+      const silenceDuration = Date.now() - silenceStart;
+      // We're in silence AFTER speech - stop waves immediately
+      if (audioWaveVisualizer && audioWaveVisualizer.style.display !== 'none') {
+        const stopTime = performance.now();
+        console.log(`[VISUALIZER ${stopTime.toFixed(2)}ms] ⚡ SILENCE DETECTED IN VISUALIZER - Stopping waves. Silence duration: ${silenceDuration}ms, Current level: ${currentLevel.toFixed(2)}, maxAudioLevel: ${maxAudioLevel.toFixed(2)}`);
+        audioWaveVisualizer.style.display = 'none';
+        if (audioStatusText) {
+          audioStatusText.textContent = 'Transcribing audio...';
+        }
+        updateVoiceButtons('processing');
+      }
+      if (audioVisualizerBars && audioVisualizerBars.classList.contains('active')) {
+        audioVisualizerBars.classList.remove('active');
+      }
+      // Don't update waves when in silence - return early
+      return;
+    }
+    
+    // Still speaking - continue animating waves
     // Update visualizer bars (only if they exist)
     if (!audioVisualizerBars) {
       // Try to update wave visualizer instead
@@ -642,33 +698,65 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bufferLength = vadAnalyser.frequencyBinCount;
     const vadDataArray = new Uint8Array(bufferLength);
 
-    const SILENCE_THRESHOLD = 8; // Threshold for detecting silence in frequency domain (0-255 range)
-    const SILENCE_DURATION = 1500; // 1.5 seconds of silence to stop (reduced for faster response)
+    const SILENCE_THRESHOLD = 12; // Increased threshold - levels 14-24 after speech should be considered silence
+    const SILENCE_DURATION = 800; // 0.8 seconds of silence to stop (faster response - immediate processing)
     const MIN_RECORDING_DURATION = 300; // Minimum 0.3 seconds before checking for silence
-    let silenceStart = null;
+    const MAX_RECORDING_DURATION = 10000; // Maximum 10 seconds - force stop even if silence not detected
+    // silenceStart is now declared at top level so visualizer can access it
     let recordingStartTime = Date.now();
+    let maxDurationTimeout = null;
 
     function checkVAD() {
+      const vadCheckStart = performance.now();
       if (!isRecording) return;
 
-      // Use frequency data for better speech detection
+      // Use both frequency and time-domain data for better speech detection
       vadAnalyser.getByteFrequencyData(vadDataArray);
+      
+      // Also get time-domain data for more accurate volume detection
+      const timeDataArray = new Uint8Array(bufferLength);
+      vadAnalyser.getByteTimeDomainData(timeDataArray);
 
       // Calculate average volume from frequency data (more accurate for speech)
-      let sum = 0;
+      let freqSum = 0;
       for (let i = 0; i < bufferLength; i++) {
-        sum += vadDataArray[i];
+        freqSum += vadDataArray[i];
       }
-      const average = sum / bufferLength;
+      const freqAverage = freqSum / bufferLength;
       
-      // Track maximum audio level for quality check
-      if (average > maxAudioLevel) {
-        maxAudioLevel = average;
+      // Calculate RMS from time-domain data (better for overall volume)
+      let timeSumSquares = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const normalized = (timeDataArray[i] - 128) / 128;
+        timeSumSquares += normalized * normalized;
+      }
+      const rms = Math.sqrt(timeSumSquares / bufferLength);
+      const timeDomainLevel = rms * 255; // Scale to 0-255 range
+      
+      // Use the higher of the two measurements to catch quiet voices better
+      const average = Math.max(freqAverage, timeDomainLevel);
+
+      // Focus on speech frequency ranges (human voice: 85-255 Hz fundamental, but harmonics extend higher)
+      // Check frequencies in the speech range (roughly bins 0-50 for 48kHz sample rate with 2048 FFT)
+      let speechRangeSum = 0;
+      const speechRangeEnd = Math.min(50, bufferLength);
+      for (let i = 0; i < speechRangeEnd; i++) {
+        speechRangeSum += vadDataArray[i];
+      }
+      const speechRangeAverage = speechRangeSum / speechRangeEnd;
+      
+      // Use the maximum of all measurements to catch quiet voices - this is more sensitive
+      // This ensures we don't miss quiet speech that might be in one frequency range but not others
+      const combinedLevel = Math.max(average, speechRangeAverage, timeDomainLevel);
+      
+      // Track maximum audio level for quality check (use combined level)
+      if (combinedLevel > maxAudioLevel) {
+        maxAudioLevel = combinedLevel;
       }
       
       // Log volume for debugging (more frequent for troubleshooting)
-      if (Math.random() < 0.2) { // Log 20% of the time
-        console.log('Audio level:', average.toFixed(2), 'Max:', maxAudioLevel.toFixed(2), 'Silence threshold:', SILENCE_THRESHOLD);
+      if (Math.random() < 0.3) { // Log 30% of the time for better debugging
+        console.log('VAD: combinedLevel:', combinedLevel.toFixed(2), 'maxAudioLevel:', maxAudioLevel.toFixed(2), 'freqAvg:', freqAverage.toFixed(2), 'timeDomain:', timeDomainLevel.toFixed(2), 'speechRange:', speechRangeAverage.toFixed(2), 'hasSpeech:', (maxAudioLevel >= 6));
       }
 
       // Don't check for silence until minimum recording duration has passed
@@ -677,42 +765,153 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(checkVAD, 100);
         return;
       }
+      
+      // Force stop if recording has been going too long (fallback safety)
+      if (recordingDuration > MAX_RECORDING_DURATION) {
+        console.log('Maximum recording duration reached (', MAX_RECORDING_DURATION, 'ms), forcing stop. maxAudioLevel:', maxAudioLevel.toFixed(2));
+        stopRecording();
+        return;
+      }
 
       // Only stop on silence if we've detected meaningful speech first
       // This prevents stopping when user hasn't spoken yet
-      // Frequency data uses 0-255 range, so threshold is higher
-      const SPEECH_DETECTED_THRESHOLD = 15; // Adjusted for frequency domain (0-255 range)
+      // Need a higher threshold to distinguish real speech from background noise
+      const SPEECH_DETECTED_THRESHOLD = 20; // Higher threshold to avoid false positives from background noise (was 6)
       const hasDetectedSpeech = maxAudioLevel >= SPEECH_DETECTED_THRESHOLD;
 
-      if (average < SILENCE_THRESHOLD) {
+      // Use relative silence threshold: if we detected speech, use 20% of peak as silence threshold
+      // This handles residual noise/echo after speech better
+      // IMPORTANT: Only use relative threshold AFTER speech has been detected, otherwise use base threshold
+      const relativeSilenceThreshold = hasDetectedSpeech && maxAudioLevel > SPEECH_DETECTED_THRESHOLD
+        ? Math.max(SILENCE_THRESHOLD, maxAudioLevel * 0.2) 
+        : SILENCE_THRESHOLD;
+      
+      if (combinedLevel < relativeSilenceThreshold) {
         // Silence detected
+        const silenceDetectTime = performance.now();
+        console.log(`[VAD ${silenceDetectTime.toFixed(2)}ms] SILENCE DETECTED - Level: ${combinedLevel.toFixed(2)} < ${relativeSilenceThreshold.toFixed(2)} (threshold: ${SILENCE_THRESHOLD}, relative: ${relativeSilenceThreshold.toFixed(2)}, peak: ${maxAudioLevel.toFixed(2)}), hasDetectedSpeech: ${hasDetectedSpeech}, silenceStart: ${silenceStart}`);
+        
+        // CRITICAL: Only set silenceStart if we've actually detected speech first
+        // This prevents false silence detection from background noise
         if (hasDetectedSpeech) {
           // Only check for silence-based stop if we've already detected speech
           if (silenceStart === null) {
+            const silenceStartTime = performance.now();
             silenceStart = Date.now();
-            console.log('Silence started (after speech detected)');
-          } else if (Date.now() - silenceStart > SILENCE_DURATION) {
-            console.log('Silence detected for', SILENCE_DURATION, 'ms after speech, stopping recording');
-            stopRecording();
-            return;
+            console.log(`[VAD ${silenceStartTime.toFixed(2)}ms] ⚡ SILENCE STARTED - Setting silenceStart timestamp. maxAudioLevel: ${maxAudioLevel.toFixed(2)}, combinedLevel: ${combinedLevel.toFixed(2)}`);
+            // Visualizer will handle stopping waves immediately (runs at 60fps)
+            updateVoiceButtons('processing');
+            if (audioStatusText) {
+              audioStatusText.textContent = 'Transcribing audio...';
+            }
+          } else {
+            const silenceDuration = Date.now() - silenceStart;
+            const stopCheckTime = performance.now();
+            if (silenceDuration > SILENCE_DURATION) {
+              console.log(`[VAD ${stopCheckTime.toFixed(2)}ms] ⚡⚡⚡ STOPPING RECORDING - Silence duration: ${silenceDuration}ms > ${SILENCE_DURATION}ms, maxAudioLevel: ${maxAudioLevel.toFixed(2)}`);
+              
+              // IMMEDIATELY stop waves and visualizer BEFORE calling stopRecording
+              const stopWavesTime = performance.now();
+              if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+                console.log(`[VAD ${stopWavesTime.toFixed(2)}ms] Cancelled animation frame`);
+              }
+              if (audioWaveVisualizer) {
+                audioWaveVisualizer.style.display = 'none';
+                console.log(`[VAD ${stopWavesTime.toFixed(2)}ms] Hid wave visualizer`);
+              }
+              if (audioVisualizerBars) {
+                audioVisualizerBars.classList.remove('active');
+              }
+              
+              // Update UI immediately to show we're processing
+              const uiUpdateTime = performance.now();
+              updateVoiceButtons('processing');
+              if (audioStatusText) {
+                audioStatusText.textContent = 'Transcribing audio...';
+              }
+              console.log(`[VAD ${uiUpdateTime.toFixed(2)}ms] Updated UI to processing state`);
+              
+              // Now stop recording
+              const stopRecTime = performance.now();
+              stopRecording();
+              console.log(`[VAD ${stopRecTime.toFixed(2)}ms] Called stopRecording() - Total VAD check time: ${(stopRecTime - vadCheckStart).toFixed(2)}ms`);
+              return;
+            } else {
+              // Show "Transcribing..." when approaching silence threshold (last 300ms) for early feedback
+              const remaining = SILENCE_DURATION - silenceDuration;
+              if (remaining < 300) {
+                // Stop waves early when we're about to stop
+                if (animationId) {
+                  cancelAnimationFrame(animationId);
+                  animationId = null;
+                }
+                if (audioWaveVisualizer) {
+                  audioWaveVisualizer.style.display = 'none';
+                }
+                if (audioVisualizerBars) {
+                  audioVisualizerBars.classList.remove('active');
+                }
+                
+                if (audioStatusText) {
+                  audioStatusText.textContent = 'Transcribing audio...';
+                }
+                // Also update button state early for immediate visual feedback
+                updateVoiceButtons('processing');
+              }
+              // Log progress towards silence threshold
+              if (Math.random() < 0.1) {
+                console.log('Silence continuing,', silenceDuration, 'ms /', SILENCE_DURATION, 'ms');
+              }
+            }
           }
         } else {
           // No speech detected yet - keep listening, don't stop on silence
+          // But log if we've been waiting a while
+          const waitTime = Date.now() - recordingStartTime;
+          if (waitTime > 3000 && Math.random() < 0.1) {
+            console.log('Still waiting for speech, maxAudioLevel:', maxAudioLevel.toFixed(2), 'threshold:', SPEECH_DETECTED_THRESHOLD, 'waitTime:', waitTime, 'ms');
+          }
           silenceStart = null; // Reset silence timer since we're still waiting for speech
         }
       } else {
         // Sound detected, reset silence timer
         if (silenceStart !== null) {
-          console.log('Sound detected, resetting silence timer');
+          const soundDetectTime = performance.now();
+          console.log(`[VAD ${soundDetectTime.toFixed(2)}ms] 🔊 SOUND DETECTED - Level: ${combinedLevel.toFixed(2)} >= ${SILENCE_THRESHOLD}, resetting silence timer`);
         }
         silenceStart = null;
       }
 
-      setTimeout(checkVAD, 100); // Check every 100ms
+      const vadCheckEnd = performance.now();
+      const vadCheckDuration = vadCheckEnd - vadCheckStart;
+      if (vadCheckDuration > 5) { // Log if VAD check takes more than 5ms
+        console.log(`[VAD ${vadCheckEnd.toFixed(2)}ms] VAD check took ${vadCheckDuration.toFixed(2)}ms`);
+      }
+      
+      setTimeout(checkVAD, 50); // Check every 50ms for faster response
     }
 
-    // Reset recording start time
+    // Reset recording start time and silence tracking
     recordingStartTime = Date.now();
+    silenceStart = null; // Reset silence tracking for new recording
+    // Reset maxAudioLevel for new recording - we want fresh detection
+    // This prevents false silence detection from previous recording's peak
+    const oldMaxAudioLevel = maxAudioLevel;
+    maxAudioLevel = 0;
+    console.log(`[VAD] Starting new recording - reset maxAudioLevel from ${oldMaxAudioLevel.toFixed(2)} to 0`);
+    
+    // Set maximum duration timeout as fallback safety
+    if (maxDurationTimeout) {
+      clearTimeout(maxDurationTimeout);
+    }
+    maxDurationTimeout = setTimeout(() => {
+      if (isRecording) {
+        console.log('Maximum recording duration timeout reached, forcing stop');
+        stopRecording();
+      }
+    }, MAX_RECORDING_DURATION);
     
     // Start VAD checking after a short delay (to avoid immediate stops)
     setTimeout(() => {
@@ -814,9 +1013,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         audioBitsPerSecond: 128000  // 128 kbps for better quality
       });
 
-      // Clear previous chunks and reset max audio level
+      // Clear previous chunks
       recordedChunks = [];
-      maxAudioLevel = 0;
+      // Don't reset maxAudioLevel here - let it persist so relative threshold works
+      // It will be reset when VAD detects new speech or when recording actually stops
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -826,9 +1026,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       };
 
+      // Store maxAudioLevel in closure so it persists even if reset elsewhere
+      let savedMaxAudioLevel = maxAudioLevel;
+      
       mediaRecorder.onstop = async () => {
         console.log('Recording stopped, processing', recordedChunks.length, 'chunks');
-        console.log('Maximum audio level detected:', maxAudioLevel.toFixed(2));
+        // Use saved value if current maxAudioLevel was reset
+        const finalMaxAudioLevel = maxAudioLevel > 0 ? maxAudioLevel : savedMaxAudioLevel;
+        maxAudioLevel = finalMaxAudioLevel; // Restore it
+        console.log('Maximum audio level detected:', maxAudioLevel.toFixed(2), '(saved:', savedMaxAudioLevel.toFixed(2), ')');
 
         // Only pause visualizer, don't stop it in continuous mode
         if (!continuousMode) {
@@ -842,10 +1048,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // Check if audio has meaningful content before sending
-        // Frequency data uses 0-255 range, so threshold is higher
-        const MIN_AUDIO_LEVEL = 15; // Adjusted for frequency domain (0-255 range)
+        // Lowered threshold significantly to catch quieter voices (was 15, now 3)
+        const MIN_AUDIO_LEVEL = 3; // Even lower threshold to accept quiet voices
+        console.log('Recording stopped. Checking audio quality. maxAudioLevel:', maxAudioLevel.toFixed(2), 'MIN_AUDIO_LEVEL:', MIN_AUDIO_LEVEL, 'chunks:', recordedChunks.length);
         if (maxAudioLevel < MIN_AUDIO_LEVEL) {
-          console.log('Audio level too low (', maxAudioLevel.toFixed(2), '), not sending. Likely silence or background noise.');
+          console.log('Audio level too low (', maxAudioLevel.toFixed(2), ' < ', MIN_AUDIO_LEVEL, '), not sending. Likely silence or background noise.');
           if (audioStatusText) {
             audioStatusText.textContent = 'No speech detected. Please try again.';
           }
@@ -901,14 +1108,21 @@ document.addEventListener('DOMContentLoaded', async () => {
           const arrayBuffer = await audioBlob.arrayBuffer();
           console.log('Sending arrayBuffer size:', arrayBuffer.byteLength, 'bytes to socket');
           
+          // Update UI to show we're sending and will start transcribing
+          updateVoiceButtons('processing');
+          if (audioStatusText) {
+            audioStatusText.textContent = 'Sending audio...';
+          }
+          
           try {
             socket.emit('audio-complete', {
               audio: arrayBuffer,
               mimeType: mimeType
             });
-            console.log('Audio sent successfully to server');
+            console.log('Audio sent successfully to server - transcription starting');
+            // Status will be updated by 'status' event when transcription actually starts
             if (audioStatusText) {
-              audioStatusText.textContent = 'Processing audio...';
+              audioStatusText.textContent = 'Transcribing audio...';
             }
           } catch (error) {
             console.error('Error sending audio:', error);
@@ -973,32 +1187,59 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Stop recording
   function stopRecording() {
+    const stopRecStart = performance.now();
+    console.log(`[STOP_RECORDING ${stopRecStart.toFixed(2)}ms] stopRecording() called, maxAudioLevel BEFORE stop: ${maxAudioLevel.toFixed(2)}`);
+    
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      // Save maxAudioLevel BEFORE setting isRecording = false (VAD might reset it)
+      const savedMaxAudioLevel = maxAudioLevel;
+      console.log(`[STOP_RECORDING ${performance.now().toFixed(2)}ms] Saved maxAudioLevel: ${savedMaxAudioLevel.toFixed(2)}`);
+      
       isRecording = false;
-      mediaRecorder.stop();
-
-      // Update UI - show processing if in continuous mode, otherwise show idle
-      if (continuousMode) {
-        updateVoiceButtons('processing'); // Show "Processing..." button in continuous mode
-      } else {
-        updateVoiceButtons('idle'); // Show "Speak to Agent" button if not in continuous mode
+      
+      // IMMEDIATELY update UI to show processing state - don't wait for mediaRecorder.stop()
+      // This gives instant visual feedback when user stops speaking
+      
+      // Stop the visualizer animation FIRST - this is critical to stop waves immediately
+      const stopAnimTime = performance.now();
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+        console.log(`[STOP_RECORDING ${stopAnimTime.toFixed(2)}ms] Cancelled animation frame`);
       }
-      if (recordButton) {
-        recordButton.classList.remove('recording');
-        recordButton.innerHTML = '<span class="record-icon"></span><span>Start Voice Order</span>';
-      }
-      if (audioStatusText) {
-        audioStatusText.textContent = 'Processing audio...';
+      
+      // Hide wave visualizer immediately - force stop waves
+      const hideWavesTime = performance.now();
+      if (audioWaveVisualizer) {
+        audioWaveVisualizer.style.display = 'none';
+        console.log(`[STOP_RECORDING ${hideWavesTime.toFixed(2)}ms] Hid wave visualizer`);
       }
       if (audioVisualizerBars) {
         audioVisualizerBars.classList.remove('active');
       }
-      // Note: audioVisualizerBars may not exist in v2 design - that's OK
+      
+      // Now update UI to processing state
+      const uiUpdateTime = performance.now();
+      updateVoiceButtons('processing'); // Always show processing state immediately
+      if (audioStatusText) {
+        audioStatusText.textContent = 'Preparing audio...';
+      }
+      console.log(`[STOP_RECORDING ${uiUpdateTime.toFixed(2)}ms] Updated UI to processing - UI update took ${(uiUpdateTime - hideWavesTime).toFixed(2)}ms`);
+      
+      // Now stop the media recorder
+      const stopMediaRecTime = performance.now();
+      mediaRecorder.stop();
+      console.log(`[STOP_RECORDING ${stopMediaRecTime.toFixed(2)}ms] mediaRecorder.stop() called - Total stopRecording time: ${(stopMediaRecTime - stopRecStart).toFixed(2)}ms`);
 
       // Clear any silence timeout
       if (silenceTimeout) {
         clearTimeout(silenceTimeout);
         silenceTimeout = null;
+      }
+      // Clear maximum duration timeout
+      if (maxDurationTimeout) {
+        clearTimeout(maxDurationTimeout);
+        maxDurationTimeout = null;
       }
     }
   }
