@@ -26,6 +26,14 @@ document.addEventListener('DOMContentLoaded', () => {
           chatInterface.classList.add('fade-in');
         });
       }
+      // Show cart icon button
+      const cartIconButton = document.getElementById('cartIconButton');
+      if (cartIconButton) {
+        cartIconButton.style.display = 'flex';
+        requestAnimationFrame(() => {
+          cartIconButton.classList.remove('cart-icon-hidden');
+        });
+      }
       // Focus on the message input after animation starts
       setTimeout(() => {
         if (messageInput) {
@@ -252,6 +260,10 @@ document.addEventListener('DOMContentLoaded', () => {
                   // Refresh cart to show updated items
                   if (window.refreshCart) {
                     window.refreshCart();
+                  }
+                  // Show cart panel if items were added
+                  if (window.showCart) {
+                    window.showCart();
                   }
                 }
 
