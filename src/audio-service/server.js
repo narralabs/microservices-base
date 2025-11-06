@@ -126,7 +126,7 @@ app.post('/api/tts', async (req, res) => {
 
   } catch (error) {
     console.error('Error processing TTS:', error.response?.data || error.message);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to synthesize speech',
       details: error.response?.data || error.message
     });
@@ -175,7 +175,7 @@ app.post('/api/voice-order', upload.single('audio'), async (req, res) => {
 
   } catch (error) {
     console.error('Error processing voice order:', error.response?.data || error.message);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to process voice order',
       details: error.response?.data || error.message
     });
@@ -185,7 +185,7 @@ app.post('/api/voice-order', upload.single('audio'), async (req, res) => {
 // Socket.IO realtime audio handling
 io.on('connection', (socket) => {
   console.log('Client connected for realtime audio:', socket.id);
-  
+
   let isProcessing = false;
 
   // Handle complete audio blob from client
@@ -196,11 +196,11 @@ io.on('connection', (socket) => {
     }
 
     isProcessing = true;
-    
+
     try {
       const { audio, mimeType } = data;
       const audioBuffer = Buffer.from(audio);
-      
+
       console.log('Received complete audio:', audioBuffer.length, 'bytes, mimeType:', mimeType);
 
       // Debug: Save audio to file to inspect
@@ -217,20 +217,20 @@ io.on('connection', (socket) => {
 
       // Send to speaches service for transcription
       socket.emit('status', { message: 'Transcribing audio...' });
-      
+
       const formData = new FormData();
       const audioStream = Readable.from(audioBuffer);
-      
+
       // Determine filename based on mimeType
       let filename = 'audio.webm';
       let contentType = mimeType || 'audio/webm';
-      
+
       if (mimeType && mimeType.includes('ogg')) {
         filename = 'audio.ogg';
       } else if (mimeType && mimeType.includes('webm')) {
         filename = 'audio.webm';
       }
-      
+
       formData.append('file', audioStream, {
         filename: filename,
         contentType: contentType
