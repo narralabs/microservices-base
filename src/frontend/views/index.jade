@@ -1,62 +1,41 @@
 extends layout
 
 block content
-  .cafe-container
-    h1.cafe-title= title
-    p.cafe-description= description
+  .w-full.min-h-screen.flex.items-center.justify-center.relative.bg-background
+    // Welcome Section (initially visible)
+    .absolute.w-full.max-w-4xl.px-6.py-8.text-center#welcomeSection(class="sm:px-14 sm:py-14" style="top: 50%; left: 50%; transform: translate(-50%, -50%);")
+      .w-full
+        h1.font-medium.text-xl.leading-normal.mb-2.text-center(class="sm:text-2xl" style="letter-spacing: -0.48px; color: rgba(56, 34, 15, 0.8);")
+          | welcome to hellocafe.ai
+        p.text-base.mb-6(class="sm:text-xl sm:mb-10" style="line-height: 1.4; letter-spacing: -0.4px; color: rgba(56, 34, 15, 0.5); max-width: 900px;")
+          | experience our AI-powered ordering system.
+          br
+          br
+          | we've built a complete café ordering system using entirely self-hosted AI models.
+          br
+          br
+          | this entire system runs on just 2 Hetzner servers (1 CPU + 1 CPU/GPU) for only $230/month, proving that powerful AI doesn't require massive infrastructure.
+        .flex.gap-4.items-center.justify-center.w-full.mt-6(class="sm:mt-10")
+          button.bg-primary.text-white.border-none.rounded-full.h-10.px-4.py-2.font-medium.text-sm.cursor-pointer.transition-all.whitespace-nowrap.shadow-lg#startExperience(class="sm:text-base" style="letter-spacing: -0.32px;" onmouseover="this.style.backgroundColor='rgba(56, 34, 15, 0.9)'; this.style.transform='translateY(-1px)';" onmouseout="this.style.backgroundColor='#38220f'; this.style.transform='translateY(0)';") start the experience
 
-    .main-content
-      .menu-section
-        h2.menu-title Our Coffee Menu
-        .menu-list
-          each item in menu
-            .menu-item
-              .menu-item-header
-                h3.item-name= item.name
-                .item-price= item.price
-              p.item-description= item.description
+    // Chat Section (initially hidden)
+    .absolute.w-full.max-w-xl.px-4.py-6#chatInterface(class="sm:p-8" style="display: none; top: 50%; left: 50%; transform: translate(-50%, -50%);")
+      .flex.flex-col.min-h-80.max-h-80(class="sm:min-h-96 sm:max-h-96")
+        .flex-grow.py-4.overflow-y-auto.flex.flex-col.gap-2.chat-messages
+          // Messages will appear here
+        .flex.gap-2.items-center.pt-4(class="sm:gap-4")
+          input.flex-grow.bg-gray-200.border.rounded-full.h-10.px-3.py-2.text-sm.text-primary.outline-none.transition-all.message-input(class="sm:px-4 sm:text-base" style="background-color: #e9dcd3; border-color: rgba(233, 220, 211, 0.4); letter-spacing: -0.32px;" type="text" placeholder="Type your order here..." autofocus onfocus="this.style.borderColor='rgba(56, 34, 15, 0.3)';" onblur="this.style.borderColor='rgba(233, 220, 211, 0.4)';")
+          button.bg-primary.text-white.border-none.rounded-full.h-10.w-10.min-w-10.p-0.text-base.cursor-pointer.transition-all.flex.items-center.justify-center.send-button ➤
+      .mt-2.font-medium.text-sm.text-left.cart-status-message(class="sm:text-base" style="display: none; letter-spacing: -0.32px; color: rgba(56, 34, 15, 0.7);")
+        // Cart status messages appear here
 
-      .audio-section
-        h2.audio-title Order via Voice
-        p.audio-description Click once to start a continuous conversation. Speak naturally, pause when done, and AI responds. Keeps listening until you click stop.
-        .audio-box
-          .audio-visualizer
-            .audio-visualizer-bars
-              .visualizer-bar
-              .visualizer-bar
-              .visualizer-bar
-              .visualizer-bar
-              .visualizer-bar
-              .visualizer-bar
-              .visualizer-bar
-              .visualizer-bar
-          button.record-button
-            span.record-icon
-            span Start Voice Order
-          .audio-status-text Click microphone to start voice order
-          .audio-transcription-display(style='display: none;')
-            .transcription-label Live Transcription:
-            .transcription-text
-
-      .chat-section
-        h2.chat-title Order via AI Chat
-        p.chat-description Chat with our AI assistant to place your order. Our local LLM-powered system will help you customize your perfect coffee drink.
-        .chat-box
-          .chat-messages
-            // Messages will appear here
-          .chat-input
-            input.message-input(type="text" placeholder="Type your order here..." autofocus)
-            button.send-button Send
-
-      .cart-section
-        h2.cart-title Your Cart
-        .cart-content
-          .cart-items
-            // Cart items will appear here
-          .cart-summary
-            .cart-total
-              span.total-label Total Items:
-              span.total-count 0
-            .cart-actions
-              button.empty-cart-button.secondary-button Empty Cart
-              button.checkout-button.primary-button Checkout
+    // Footer
+    .absolute.bottom-4.w-full(class="sm:bottom-10" style="left: 50%; transform: translateX(-50%);")
+      .flex.flex-col.items-center.justify-between.w-full.px-4.gap-2(class="sm:flex-row sm:px-10 sm:gap-0")
+        .hidden.flex-1(class="sm:block")
+        p.font-normal.text-xs.m-0.text-center.flex-1(class="sm:text-sm" style="line-height: 1.3; letter-spacing: -0.28px; color: rgba(56, 34, 15, 0.5);") an experiment by narra labs © 2025
+        .flex.items-center.gap-2.flex-1.justify-center(class="sm:gap-3 sm:justify-end")
+          a.w-7.h-7.flex.items-center.justify-center.transition-opacity(class="sm:w-8 sm:h-8" href="https://narralabs.com" target="_blank" rel="noopener" onmouseover="this.style.opacity='0.7';" onmouseout="this.style.opacity='1';")
+            img.w-full.h-full(src="/images/narra-labs-logo.svg" alt="Narra Labs")
+          a.w-7.h-7.flex.items-center.justify-center.transition-opacity(class="sm:w-8 sm:h-8" href="https://github.com/narralabs" target="_blank" rel="noopener" onmouseover="this.style.opacity='0.7';" onmouseout="this.style.opacity='1';")
+            img.w-full.h-full(src="/images/github-logo.svg" alt="GitHub")

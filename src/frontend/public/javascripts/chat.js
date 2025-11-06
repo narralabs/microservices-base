@@ -2,9 +2,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const messageInput = document.querySelector('.message-input');
   const sendButton = document.querySelector('.send-button');
   const chatMessages = document.querySelector('.chat-messages');
+  
+  // V2 Design elements
+  const startButton = document.getElementById('startExperience');
+  const welcomeSection = document.getElementById('welcomeSection');
+  const chatInterface = document.getElementById('chatInterface');
+  const cartStatusMessage = document.querySelector('.cart-status-message');
 
   // Track conversation history
   let conversationHistory = [];
+
+  // Handle "Start the Experience" button
+  if (startButton) {
+    startButton.addEventListener('click', () => {
+      if (welcomeSection) {
+        welcomeSection.style.display = 'none';
+      }
+      if (chatInterface) {
+        // Show the chat interface first
+        chatInterface.style.display = 'block';
+        // Trigger fade-in animation on next frame
+        requestAnimationFrame(() => {
+          chatInterface.classList.add('fade-in');
+        });
+      }
+      // Focus on the message input after animation starts
+      setTimeout(() => {
+        if (messageInput) {
+          messageInput.focus();
+        }
+      }, 100);
+    });
+  }
 
   function addMessage(text, isUser = false) {
     const messageDiv = document.createElement('div');
@@ -57,25 +86,48 @@ document.addEventListener('DOMContentLoaded', () => {
   function displayOrders(orders) {
     if (!orders || orders.length === 0) return;
 
-    const ordersList = document.createElement('div');
-    ordersList.className = 'orders-list';
+    // For v2 design, show cart status in the dedicated message area
+    if (cartStatusMessage) {
+      let statusText = '';
+      orders.forEach(order => {
+        if (order.action === 2 || order.action === 'EMPTY_CART') {
+          statusText = 'Cart cleared';
+        } else if (order.action === 1 || order.action === 'REMOVE') {
+          statusText = `Removed ${order.quantity} ${order.item} from cart`;
+        } else {
+          statusText = `Added ${order.quantity} item${order.quantity > 1 ? 's' : ''} to the cart`;
+        }
+      });
+      
+      cartStatusMessage.textContent = statusText;
+      cartStatusMessage.style.display = 'block';
+      
+      // Hide after 3 seconds
+      setTimeout(() => {
+        cartStatusMessage.style.display = 'none';
+      }, 3000);
+    } else {
+      // Fallback to old design
+      const ordersList = document.createElement('div');
+      ordersList.className = 'orders-list';
 
-    orders.forEach(order => {
-      const orderItem = document.createElement('div');
-      const actionName = order.action === 2 || order.action === 'EMPTY_CART' ? 'empty_cart' :
-                         order.action === 1 || order.action === 'REMOVE' ? 'remove' : 'add';
-      orderItem.className = `order-item ${actionName}`;
+      orders.forEach(order => {
+        const orderItem = document.createElement('div');
+        const actionName = order.action === 2 || order.action === 'EMPTY_CART' ? 'empty_cart' :
+                           order.action === 1 || order.action === 'REMOVE' ? 'remove' : 'add';
+        orderItem.className = `order-item ${actionName}`;
 
-      if (order.action === 2 || order.action === 'EMPTY_CART') {
-        orderItem.textContent = `EMPTY_CART: Cart cleared`;
-      } else {
-        orderItem.textContent = `${order.action}: ${order.quantity}x ${order.item}`;
-      }
-      ordersList.appendChild(orderItem);
-    });
+        if (order.action === 2 || order.action === 'EMPTY_CART') {
+          orderItem.textContent = `EMPTY_CART: Cart cleared`;
+        } else {
+          orderItem.textContent = `${order.action}: ${order.quantity}x ${order.item}`;
+        }
+        ordersList.appendChild(orderItem);
+      });
 
-    chatMessages.appendChild(ordersList);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+      chatMessages.appendChild(ordersList);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
   }
 
   async function sendMessage(text) {

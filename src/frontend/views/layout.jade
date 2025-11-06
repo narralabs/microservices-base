@@ -1,23 +1,34 @@
 doctype html
 html
   head
+    meta(charset='utf-8')
+    meta(name='viewport', content='width=device-width, initial-scale=1.0')
     title= title
-    link(rel='stylesheet', href='/stylesheets/style.css')
+    link(rel='preconnect', href='https://fonts.googleapis.com')
+    link(rel='preconnect', href='https://fonts.gstatic.com', crossorigin='')
+    link(rel='stylesheet', href='https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap')
+    script(src='https://cdn.tailwindcss.com')
+    script.
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#38220f',
+              secondary: '#ead4c3',
+              background: '#f3e7dd',
+            },
+            borderRadius: {
+              'pill': '999px',
+            },
+          },
+        },
+      }
     link(rel='stylesheet', href='/stylesheets/chat.css')
     script(src='/socket.io/socket.io.js')
     script(src='/javascripts/chat.js')
     script(src='/javascripts/cart.js')
     script(src='/javascripts/audio-realtime.js')
-  body
-    header.site-header
-      .header-content
-        if user
-          .user-info
-            span.welcome-text Welcome, #{user.first_name}
-            a.logout-link(href="/logout") Logout
-        else
-          .auth-links
-            a.login-link(href="/login") Login
+  body.bg-background.text-primary(style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; line-height: 1.4; letter-spacing: -0.32px;")
     block content
     if gaTrackingId
       script(async, src='https://www.googletagmanager.com/gtag/js?id=#{gaTrackingId}')
