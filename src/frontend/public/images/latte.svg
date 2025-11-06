@@ -1,0 +1,29 @@
+<svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="latte2Gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#8B6F47;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6F4E37;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="latte2FoamGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFF8E7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E8D5C4;stop-opacity:1" />
+    </linearGradient>
+    <filter id="latte2Shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <!-- Cup -->
+  <path d="M18 24C18 20.6863 20.6863 18 24 18H48C51.3137 18 54 20.6863 54 24V48C54 51.3137 51.3137 54 48 54H24C20.6863 54 18 51.3137 18 48V24Z" fill="url(#latte2Gradient)" filter="url(#latte2Shadow)"/>
+  <!-- Coffee layer -->
+  <ellipse cx="36" cy="40" rx="12" ry="8" fill="#4A2C1A"/>
+  <!-- Milk layer -->
+  <ellipse cx="36" cy="34" rx="12" ry="8" fill="#D4A574" opacity="0.8"/>
+  <!-- Foam layer -->
+  <ellipse cx="36" cy="26" rx="14" ry="10" fill="url(#latte2FoamGradient)"/>
+  <!-- Latte art rosetta -->
+  <path d="M36 24 Q32 22 30 26 Q32 28 36 30 Q40 28 42 26 Q40 22 36 24" fill="#8B6F47" opacity="0.5"/>
+  <!-- Foam texture -->
+  <circle cx="32" cy="25" r="1.5" fill="#FFFFFF" opacity="0.6"/>
+  <circle cx="40" cy="25" r="1.5" fill="#FFFFFF" opacity="0.6"/>
+</svg>
+

@@ -1,0 +1,20 @@
+<svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cupGradient4" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ead4c3;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#38220f;stop-opacity:0.15" />
+    </linearGradient>
+  </defs>
+  <!-- Cup outline -->
+  <rect x="20" y="24" width="32" height="36" rx="3" fill="url(#cupGradient4)" stroke="#38220f" stroke-width="1.5" stroke-opacity="0.2"/>
+  <!-- Handle -->
+  <path d="M52 32 C56 32, 58 34, 58 38 C58 42, 56 44, 52 44" stroke="#38220f" stroke-width="1.5" stroke-opacity="0.2" fill="none" stroke-linecap="round"/>
+  <!-- Coffee liquid -->
+  <rect x="22" y="30" width="28" height="24" rx="2" fill="#38220f" opacity="0.35"/>
+  <!-- Milk foam dot (macchiato mark) -->
+  <circle cx="36" cy="28" r="5" fill="#f8f1ec"/>
+  <circle cx="36" cy="28" r="3.5" fill="#ead4c3" opacity="0.8"/>
+  <!-- Small bubbles around dot -->
+  <circle cx="32" cy="30" r="1" fill="#ead4c3" opacity="0.5"/>
+  <circle cx="40" cy="30" r="1" fill="#ead4c3" opacity="0.5"/>
+</svg>

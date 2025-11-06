@@ -28,6 +28,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // Cache cart state
   let cachedCartItems = [];
 
+  // Map item names to their SVG logo paths
+  function getItemImagePath(itemName) {
+    const imageMap = {
+      'Espresso': '/images/espresso.svg',
+      'Cappuccino': '/images/cappuccino.svg',
+      'Cafe Latte': '/images/cafe-latte.svg',
+      'Macchiato': '/images/macchiato.svg',
+      'Americano': '/images/americano.svg',
+      'Mocha': '/images/mocha.svg',
+      'Latte': '/images/latte.svg',
+    };
+    return imageMap[itemName] || '/images/espresso.svg'; // Default fallback
+  }
+
   // Fetch and display cart
   async function loadCart() {
     try {
@@ -85,9 +99,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const price = itemPrices[item.item] || 0;
     const totalPrice = price * item.quantity;
+    const imagePath = getItemImagePath(item.item);
     
     itemDiv.innerHTML = `
-      <div class="cart-item-image" style="width: 72px; height: 72px; border-radius: 8px; background-color: #eae0d8; flex-shrink: 0;"></div>
+      <div class="cart-item-image" style="width: 72px; height: 72px; border-radius: 8px; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8f1ec 0%, #eae0d8 100%); box-shadow: 0 2px 8px rgba(56, 34, 15, 0.1);">
+        <img src="${imagePath}" alt="${escapeHtml(item.item)}" style="width: 100%; height: 100%; object-fit: contain; padding: 4px;" />
+      </div>
       <div class="cart-item-details">
         <div class="cart-item-header">
           <p class="cart-item-name">${escapeHtml(item.item)}</p>
