@@ -75,6 +75,21 @@ block content
             p.cart-subtotal-amount#cartSubtotal $0.00
           button.cart-checkout-button#cartCheckoutButton(type="button") checkout
 
+    // Checkout Modal
+    .checkout-modal-overlay#checkoutModalOverlay(style="display: none;")
+      .checkout-modal
+        .checkout-modal-content
+          .fun-emoji-container
+            .emoji-face
+              .emoji-eyes
+                .emoji-eye
+                .emoji-eye
+              .emoji-mouth
+          p.checkout-modal-text
+            | we don't have our AI barista to make your order but we can make you a similar product. reach out to us at 
+            a.checkout-modal-link(href="https://www.narralabs.com/contact" target="_blank" rel="noopener") narra labs
+          button.checkout-modal-close#checkoutModalClose(type="button") got it
+
     // Footer
     .absolute.bottom-4.w-full(class="sm:bottom-10" style="left: 50%; transform: translateX(-50%);")
       .flex.flex-col.items-center.justify-between.w-full.px-4.gap-2(class="sm:flex-row sm:px-10 sm:gap-0")

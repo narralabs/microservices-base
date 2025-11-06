@@ -276,7 +276,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Handle checkout
   function handleCheckout() {
-    alert('Checkout functionality coming soon!');
+    const modalOverlay = document.getElementById('checkoutModalOverlay');
+    if (modalOverlay) {
+      modalOverlay.style.display = 'flex';
+      // Trigger animation
+      requestAnimationFrame(() => {
+        modalOverlay.classList.add('modal-visible');
+      });
+    }
+  }
+
+  // Handle modal close
+  function handleModalClose() {
+    const modalOverlay = document.getElementById('checkoutModalOverlay');
+    if (modalOverlay) {
+      modalOverlay.classList.remove('modal-visible');
+      setTimeout(() => {
+        modalOverlay.style.display = 'none';
+      }, 300);
+    }
+  }
+
+  // Close modal when clicking overlay
+  function handleOverlayClick(e) {
+    const modalOverlay = document.getElementById('checkoutModalOverlay');
+    if (e.target === modalOverlay) {
+      handleModalClose();
+    }
   }
 
   // Handle close button
@@ -302,6 +328,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (cartIconButton) {
     cartIconButton.addEventListener('click', toggleCart);
+  }
+
+  // Modal event listeners
+  const modalCloseButton = document.getElementById('checkoutModalClose');
+  const modalOverlay = document.getElementById('checkoutModalOverlay');
+  
+  if (modalCloseButton) {
+    modalCloseButton.addEventListener('click', handleModalClose);
+  }
+  
+  if (modalOverlay) {
+    modalOverlay.addEventListener('click', handleOverlayClick);
   }
 
   // Load cart on page load
