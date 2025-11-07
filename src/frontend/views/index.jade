@@ -86,7 +86,8 @@ block content
                 .emoji-eye
               .emoji-mouth
           p.checkout-modal-text
-            | we don't have our AI barista to make your order but we can make you a similar product. reach out to us at 
+            | we don't have our AI barista to make your order but we can make you a similar product. reach out to us at
+            = ' '
             a.checkout-modal-link(href="https://www.narralabs.com/contact" target="_blank" rel="noopener") narra labs
           button.checkout-modal-close#checkoutModalClose(type="button") got it
 
@@ -94,9 +95,12 @@ block content
     .absolute.bottom-4.w-full(class="sm:bottom-10" style="left: 50%; transform: translateX(-50%);")
       .flex.flex-col.items-center.justify-between.w-full.px-4.gap-2(class="sm:flex-row sm:px-10 sm:gap-0")
         .hidden.flex-1(class="sm:block")
-        p.font-normal.text-xs.m-0.text-center.flex-1(class="sm:text-sm" style="line-height: 1.3; letter-spacing: -0.28px; color: rgba(56, 34, 15, 0.5);") an experiment by
+        p.font-normal.text-xs.m-0.text-center.flex-1(class="sm:text-sm" style="line-height: 1.3; letter-spacing: -0.28px; color: rgba(56, 34, 15, 0.5);")
+          | an experiment by
+          = ' '
           a(href="https://www.narralabs.com" target="_blank" rel="noopener" style="text-decoration: underline; color: inherit;") narra labs
-          |  © 2025
+          = ' '
+          | © 2025
         .flex.items-center.gap-2.flex-1.justify-center(class="sm:gap-3 sm:justify-end")
           a.w-7.h-7.flex.items-center.justify-center.transition-opacity(class="sm:w-8 sm:h-8" href="https://www.narralabs.com" target="_blank" rel="noopener" onmouseover="this.style.opacity='0.7';" onmouseout="this.style.opacity='1';")
             img.w-full.h-full(src="/images/narra-labs-logo.svg" alt="Narra Labs")
